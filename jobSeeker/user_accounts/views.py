@@ -8,6 +8,9 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 # Create your views here.
 
 def signup(request):
+    if request.user.is_authenticated:
+        return redirect('homepage.index')
+        
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
@@ -32,7 +35,8 @@ def login_view(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                messages.success(request, f'Welcome back, {username}!')
+                user_type_display = user.userprofile.get_user_type_display()
+                messages.success(request, f'Welcome back, {username}! You are logged in as a {user_type_display}.')
                 next_url = request.GET.get('next', 'homepage.index')
                 return redirect(next_url)
             else:
