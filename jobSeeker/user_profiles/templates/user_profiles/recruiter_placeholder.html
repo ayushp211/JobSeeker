@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-user-tie fa-4x text-primary mb-4"></i>
+                    <h2 class="card-title mb-3">Recruiter Dashboard</h2>
+                    <p class="lead text-muted mb-4">
+                        Welcome, {{ user.username }}! As a recruiter, you can manage job postings and find the best candidates.
+                    </p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 job-card">
+                                <div class="card-body">
+                                    <i class="fas fa-plus-circle fa-2x text-primary mb-3"></i>
+                                    <h5 class="card-title">Post New Job</h5>
+                                    <p class="card-text">Create and publish new job opportunities.</p>
+                                    <a href="{% url 'job_postings.create' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Post a Job
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 job-card">
+                                <div class="card-body">
+                                    <i class="fas fa-briefcase fa-2x text-primary mb-3"></i>
+                                    <h5 class="card-title">My Job Postings</h5>
+                                    <p class="card-text">View and manage your posted jobs.</p>
+                                    <a href="{% url 'job_postings.index' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View Jobs
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.job-card {
+    transition: transform 0.2s;
+}
+
+.job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
