@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="flex-grow-1">
+                            <h1 class="display-5 fw-bold mb-1">{{ profile.user.first_name|default:"Edit Profile to Enter Name" }} {{ profile.user.last_name }}</h1>
+                            <p class="text-muted">
+                                <i class="fas fa-envelope me-2"></i> {{ profile.user.email }}
+                            </p>
+                        </div>
+                        <a href="#" class="btn btn-dark ms-2">Edit Profile</a>
+                    </div>
+                    <hr>
+                    <div>
+                        <h4 class="card-title fw-bold mb-3"><i class="fas fa-id-card me-2 text-primary"></i>About Me</h4>
+                        <p class="fs-5">
+                            {{ profile.headline|linebreaksbr|default:"No bio has been added yet. Click 'Edit Profile' to tell recruiters about yourself!" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-briefcase me-2 text-primary"></i>Work Experience</h4>
+                    {% for exp in experiences %}
+                        <div class="mb-3">
+                            <h5 class="fw-bold">{{ exp.title }}</h5>
+                            <h6 class="text-muted">{{ exp.company }} | {{ exp.start_date|date:"F Y" }} - {{ exp.end_date|date:"F Y"|default:"Present" }}</h6>
+                            <p>{{ exp.description|linebreaksbr }}</p>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                    {% empty %}
+                        <p class="text-muted fst-italic">No work experience has been added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-graduation-cap me-2 text-primary"></i>Education</h4>
+                    {% for edu in educations %}
+                        <div class="mb-3">
+                            <h5 class="fw-bold">{{ edu.school }}</h5>
+                            <h6 class="text-muted">{{ edu.degree }}, {{ edu.field_of_study }}</h6>
+                            <p class="small text-muted">{{ edu.start_date|date:"Y" }} - {{ edu.end_date|date:"Y"|default:"Present" }}</p>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                    {% empty %}
+                        <p class="text-muted fst-italic">No education history has been added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-cogs me-2 text-primary"></i>Skills</h4>
+                    {% for skill in skills %}
+                        <span class="badge bg-secondary me-1 mb-1 fs-6">{{ skill.name }}</span>
+                    {% empty %}
+                        <p class="text-muted fst-italic">No skills have been added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Links -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-link me-2 text-primary"></i>Links</h4>
+                    <ul class="list-unstyled">
+                        {% for link in links %}
+                            <li><a href="{{ link.url }}" target="_blank" class="text-decoration-none">{{ link.name }} <i class="fas fa-external-link-alt fa-xs"></i></a></li>
+                        {% empty %}
+                            <p class="text-muted fst-italic">No links have been added yet.</p>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
