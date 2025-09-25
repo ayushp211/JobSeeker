@@ -9,8 +9,10 @@ class Skill(models.Model):
 
 class JobSeekerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='jobseekerprofile')
+    first_name = models.CharField(max_length=30, blank=True, null=True)
+    last_name = models.CharField(max_length=150, blank=True, null=True)
+    email = models.EmailField(max_length=254, blank=True, null=True)
     headline = models.CharField(max_length=255, blank=True, null=True)
-    email = models.CharField(max_length=255, blank=True, null=True)
     skills = models.ManyToManyField(Skill, blank=True)
     
     def __str__(self):
