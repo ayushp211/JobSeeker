@@ -9,13 +9,20 @@
                 <div class="card-body p-4">
                     <h3 class="card-title text-center mb-4">Sign Up</h3>
                     
-                    <!-- Error popup will be handled by JavaScript -->
+                    <!-- Errors will be displayed under each field -->
 
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
                             {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.username.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="mb-3">
                             <label class="form-label">I am a</label>
@@ -33,14 +40,35 @@
                                     </label>
                                 </div>
                             </div>
+                            {% if form.user_type.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.user_type.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="mb-3">
                             <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
                             {{ form.password1 }}
+                            {% if form.password1.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.password1.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="mb-3">
                             <label for="{{ form.password2.id_for_label }}" class="form-label">Password Confirmation</label>
                             {{ form.password2 }}
+                            {% if form.password2.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.password2.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">Sign Up</button>
@@ -121,188 +149,12 @@
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-/* Error popup styles */
-.error-popup {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #dc3545;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    max-width: 400px;
-    transform: translateX(100%);
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.error-popup.show {
-    transform: translateX(0);
-    opacity: 1;
-}
-
-.error-popup .close-btn {
-    background: none;
-    border: none;
-    color: white;
-    float: right;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-left: 10px;
-    padding: 0;
-    line-height: 1;
-}
-
-.error-popup .close-btn:hover {
-    opacity: 0.7;
-}
-
-.error-popup ul {
-    margin: 8px 0 0 0;
-    padding-left: 20px;
-}
-
-.error-popup li {
-    margin-bottom: 4px;
+/* Field error styling */
+.text-danger small {
+    font-size: 14px;
 }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if there are form errors from Django
-    {% if form.errors %}
-        const formErrors = {
-            {% for field, errors in form.errors.items %}
-                "{{ field }}": [
-                    {% for error in errors %}
-                        "{{ error|escapejs }}"{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                ]{% if not forloop.last %},{% endif %}
-            {% endfor %}
-        };
-        showErrorPopup(formErrors);
-    {% endif %}
-    
-    // Function to show error popup
-    function showErrorPopup(errors) {
-        let errorHtml = '<button class="close-btn" onclick="closeErrorPopup()">&times;</button>';
-        errorHtml += '<strong>Please fix the following errors:</strong><ul>';
-        
-        for (let field in errors) {
-            errors[field].forEach(function(error) {
-                errorHtml += '<li>' + error + '</li>';
-            });
-        }
-        errorHtml += '</ul>';
-        
-        const popup = document.createElement('div');
-        popup.className = 'error-popup';
-        popup.id = 'error-popup';
-        popup.innerHTML = errorHtml;
-        
-        document.body.appendChild(popup);
-        
-        // Show popup with animation
-        setTimeout(function() {
-            popup.classList.add('show');
-        }, 100);
-        
-        // Auto-hide after 8 seconds
-        setTimeout(function() {
-            closeErrorPopup();
-        }, 8000);
-    }
-    
-    // Function to close error popup
-    window.closeErrorPopup = function() {
-        const popup = document.getElementById('error-popup');
-        if (popup) {
-            popup.classList.remove('show');
-            setTimeout(function() {
-                popup.remove();
-            }, 300);
-        }
-    }
-    
-    // Add real-time validation for password fields
-    const password1 = document.getElementById('{{ form.password1.id_for_label }}');
-    const password2 = document.getElementById('{{ form.password2.id_for_label }}');
-    
-    if (password1) {
-        password1.addEventListener('input', function() {
-            validatePassword(this.value);
-        });
-    }
-    
-    if (password2) {
-        password2.addEventListener('input', function() {
-            validatePasswordConfirmation(password1.value, this.value);
-        });
-    }
-    
-    function validatePassword(password) {
-        const errors = [];
-        
-        if (password.length < 8) {
-            errors.push('Password must contain at least 8 characters');
-        }
-        
-        if (/^\d+$/.test(password)) {
-            errors.push('Password can\'t be entirely numeric');
-        }
-        
-        // Add more validation as needed
-        if (errors.length > 0 && password.length > 0) {
-            showValidationPopup(errors);
-        } else {
-            closeValidationPopup();
-        }
-    }
-    
-    function validatePasswordConfirmation(password1, password2) {
-        if (password2.length > 0 && password1 !== password2) {
-            showValidationPopup(['Passwords do not match']);
-        } else {
-            closeValidationPopup();
-        }
-    }
-    
-    function showValidationPopup(errors) {
-        closeValidationPopup(); // Close any existing popup
-        
-        let errorHtml = '<button class="close-btn" onclick="closeValidationPopup()">&times;</button>';
-        errorHtml += '<strong>Password Requirements:</strong><ul>';
-        
-        errors.forEach(function(error) {
-            errorHtml += '<li>' + error + '</li>';
-        });
-        errorHtml += '</ul>';
-        
-        const popup = document.createElement('div');
-        popup.className = 'error-popup';
-        popup.id = 'validation-popup';
-        popup.innerHTML = errorHtml;
-        
-        document.body.appendChild(popup);
-        
-        setTimeout(function() {
-            popup.classList.add('show');
-        }, 100);
-    }
-    
-    window.closeValidationPopup = function() {
-        const popup = document.getElementById('validation-popup');
-        if (popup) {
-            popup.classList.remove('show');
-            setTimeout(function() {
-                popup.remove();
-            }, 300);
-        }
-    }
-});
-</script>
+<!-- No JavaScript validation needed - using Django's built-in validation -->
 
 {% endblock %}
