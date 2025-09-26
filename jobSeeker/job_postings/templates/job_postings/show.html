@@ -32,14 +32,30 @@
                         <div class="col-md-6">
                             <p><i class="fas fa-map-marker-alt text-primary"></i> <strong>Location:</strong> {{ job.location }}</p>
                             <p><i class="fas fa-briefcase text-primary"></i> <strong>Job Type:</strong> {{ job.get_job_type_display }}</p>
+                            <p><i class="fas fa-laptop-house text-primary"></i> <strong>Work Location:</strong> {{ job.get_work_location_display }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><i class="fas fa-level-up-alt text-primary"></i> <strong>Experience:</strong> {{ job.get_experience_level_display }}</p>
                             {% if job.salary_min and job.salary_max %}
                                 <p><i class="fas fa-dollar-sign text-primary"></i> <strong>Salary:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</p>
                             {% endif %}
+                            {% if job.visa_sponsorship %}
+                                <p><i class="fas fa-passport text-primary"></i> <strong>Visa Sponsorship:</strong> Available</p>
+                            {% endif %}
                         </div>
                     </div>
+                    
+                    <!-- Skills Required -->
+                    {% if job.skills_required.all %}
+                        <div class="mb-4">
+                            <h6><i class="fas fa-tools text-primary"></i> Required Skills</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for skill in job.skills_required.all %}
+                                    <span class="badge bg-primary">{{ skill.name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
                     
                     <hr>
                     
@@ -81,6 +97,9 @@
                 <div class="card-body">
                     <a href="{% url 'job_postings.index' %}" class="btn btn-outline-secondary btn-sm w-100 mb-2">
                         <i class="fas fa-arrow-left"></i> Back to Jobs
+                    </a>
+                    <a href="{% url 'job_postings.search' %}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                        <i class="fas fa-search"></i> Search Jobs
                     </a>
                     {% if user.is_authenticated and user.userprofile.user_type == 'recruiter' %}
                         <a href="{% url 'job_postings.create' %}" class="btn btn-primary btn-sm w-100">

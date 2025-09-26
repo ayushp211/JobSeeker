@@ -49,7 +49,7 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label for="{{ form.job_type.id_for_label }}" class="form-label">Job Type</label>
                                 {{ form.job_type }}
                                 {% if form.job_type.errors %}
@@ -60,12 +60,23 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label for="{{ form.experience_level.id_for_label }}" class="form-label">Experience Level</label>
                                 {{ form.experience_level }}
                                 {% if form.experience_level.errors %}
                                     <div class="text-danger mt-1">
                                         {% for error in form.experience_level.errors %}
+                                            <small>{{ error }}</small><br>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.work_location.id_for_label }}" class="form-label">Work Location</label>
+                                {{ form.work_location }}
+                                {% if form.work_location.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.work_location.errors %}
                                             <small>{{ error }}</small><br>
                                         {% endfor %}
                                     </div>
@@ -96,6 +107,45 @@
                                     </div>
                                 {% endif %}
                             </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.visa_sponsorship }}
+                                <label class="form-check-label" for="{{ form.visa_sponsorship.id_for_label }}">
+                                    Visa Sponsorship Available
+                                </label>
+                            </div>
+                            {% if form.visa_sponsorship.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.visa_sponsorship.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Required Skills</label>
+                            <div class="row">
+                                {% for skill in form.skills_required %}
+                                    <div class="col-md-3 col-sm-4 col-6 mb-2">
+                                        <div class="form-check">
+                                            {{ skill.tag }}
+                                            <label class="form-check-label" for="{{ skill.id_for_label }}">
+                                                {{ skill.choice_label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.skills_required.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.skills_required.errors %}
+                                        <small>{{ error }}</small><br>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         
                         <div class="mb-3">

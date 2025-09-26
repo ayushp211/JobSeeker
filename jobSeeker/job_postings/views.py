@@ -2,12 +2,73 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import Http404
+from django.db.models import Q
 from .models import Job
-from .forms import JobForm
+from .forms import JobForm, JobSearchForm
 
 def index(request):
     jobs = Job.objects.filter(is_active=True)
     return render(request, 'job_postings/index.html', {'jobs': jobs})
+
+
+def search(request):
+    form = JobSearchForm(request.GET)
+    jobs = Job.objects.filter(is_active=True)
+    
+    if form.is_valid():
+        # Title search
+        title = form.cleaned_data.get('title')
+        if title:
+            jobs = jobs.filter(title__icontains=title)
+        
+        # Location search
+        location = form.cleaned_data.get('location')
+        if location:
+            jobs = jobs.filter(location__icontains=location)
+        
+        # Job type filter
+        job_type = form.cleaned_data.get('job_type')
+        if job_type:
+            jobs = jobs.filter(job_type=job_type)
+        
+        # Experience level filter
+        experience_level = form.cleaned_data.get('experience_level')
+        if experience_level:
+            jobs = jobs.filter(experience_level=experience_level)
+        
+        # Work location filter
+        work_location = form.cleaned_data.get('work_location')
+        if work_location:
+            jobs = jobs.filter(work_location=work_location)
+        
+        # Salary range filter
+        salary_min = form.cleaned_data.get('salary_min')
+        if salary_min:
+            jobs = jobs.filter(
+                Q(salary_max__gte=salary_min) | Q(salary_max__isnull=True)
+            )
+        
+        salary_max = form.cleaned_data.get('salary_max')
+        if salary_max:
+            jobs = jobs.filter(
+                Q(salary_min__lte=salary_max) | Q(salary_min__isnull=True)
+            )
+        
+        # Visa sponsorship filter
+        visa_sponsorship = form.cleaned_data.get('visa_sponsorship')
+        if visa_sponsorship:
+            jobs = jobs.filter(visa_sponsorship=True)
+        
+        # Skills filter
+        skills = form.cleaned_data.get('skills')
+        if skills:
+            jobs = jobs.filter(skills_required__in=skills).distinct()
+    
+    return render(request, 'job_postings/search.html', {
+        'form': form,
+        'jobs': jobs,
+        'search_performed': any(form.cleaned_data.values()) if form.is_valid() else False
+    })
 
 def show(request, id):
     job = get_object_or_404(Job, id=id, is_active=True)
