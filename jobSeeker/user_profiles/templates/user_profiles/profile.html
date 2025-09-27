@@ -113,26 +113,90 @@
 
             <div class="card shadow-sm">
                 <div class="card-body p-4">
-                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-paper-plane me-2 text-primary"></i>My Applications</h4>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title fw-bold mb-0"><i class="fas fa-paper-plane me-2 text-primary"></i>My Applications</h4>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Filter by Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item {% if not template_data.status_filter %}active{% endif %}" href="?">All Applications</a></li>
+                                {% for value, label in template_data.status_choices %}
+                                    <li><a class="dropdown-item {% if template_data.status_filter == value %}active{% endif %}" href="?status={{ value }}">{{ label }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    {% if template_data.status_filter %}
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Showing applications with status: <strong>{{ template_data.status_filter|title }}</strong>
+                            <a href="?" class="btn btn-sm btn-outline-primary ms-2">Clear Filter</a>
+                        </div>
+                    {% endif %}
+                    
                     {% for application in template_data.applications %}
                         <div class="border rounded p-3 mb-3">
                             <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="fw-bold mb-1">{{ application.job.title }}</h6>
-                                    <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
-                                    <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">{{ application.job.title }}</h6>
+                                            <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge {{ application.get_status_display_class }} mb-2">{{ application.get_status_display }}</span>
+                                            <br>
+                                            <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Status managed by recruiter
+                                            </small>
+                                        </div>
+                                        <a href="{% url 'job_postings.show' application.job.id %}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-eye me-1"></i> View Job
+                                        </a>
+                                    </div>
                                 </div>
-                                <a href="{% url 'job_postings.show' application.job.id %}" class="btn btn-outline-primary btn-sm">View Job</a>
                             </div>
+                            
                             {% if application.cover_note %}
-                                <div class="mt-2">
+                                <div class="mt-3 pt-3 border-top">
                                     <small class="text-muted">Your note:</small>
-                                    <p class="small">{{ application.cover_note|linebreaksbr|truncatewords:30 }}</p>
+                                    <p class="small mb-0">{{ application.cover_note|linebreaksbr|truncatewords:30 }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if application.status_updated_at != application.applied_at %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Status last updated {{ application.status_updated_at|timesince }} ago
+                                    </small>
                                 </div>
                             {% endif %}
                         </div>
                     {% empty %}
-                        <p class="text-muted fst-italic">You haven't applied to any jobs yet. <a href="{% url 'job_postings.index' %}">Browse jobs</a> to get started!</p>
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted fst-italic">
+                                {% if template_data.status_filter %}
+                                    No applications found with status "{{ template_data.status_filter|title }}".
+                                {% else %}
+                                    You haven't applied to any jobs yet.
+                                {% endif %}
+                            </p>
+                            <a href="{% url 'job_postings.index' %}" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Browse Jobs
+                            </a>
+                        </div>
                     {% endfor %}
                 </div>
             </div>

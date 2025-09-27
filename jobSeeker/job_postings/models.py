@@ -53,10 +53,20 @@ class Job(models.Model):
         return reverse('job_postings.show', kwargs={'id': self.pk})
 
 class JobApplication(models.Model):
+    STATUS_CHOICES = [
+        ('applied', 'Applied'),
+        ('review', 'Under Review'),
+        ('interview', 'Interview'),
+        ('offer', 'Offer'),
+        ('closed', 'Closed'),
+    ]
+    
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
     cover_note = models.TextField(help_text="Personalize your application with a tailored note")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
     applied_at = models.DateTimeField(auto_now_add=True)
+    status_updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         unique_together = ('job', 'applicant')  # Prevent duplicate applications
@@ -64,3 +74,14 @@ class JobApplication(models.Model):
     
     def __str__(self):
         return f"{self.applicant.username} applied to {self.job.title} at {self.job.company}"
+    
+    def get_status_display_class(self):
+        """Return Bootstrap CSS class for status badge"""
+        status_classes = {
+            'applied': 'bg-primary',
+            'review': 'bg-warning',
+            'interview': 'bg-info',
+            'offer': 'bg-success',
+            'closed': 'bg-secondary',
+        }
+        return status_classes.get(self.status, 'bg-secondary')

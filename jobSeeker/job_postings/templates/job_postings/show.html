@@ -17,6 +17,9 @@
                                     Actions
                                 </button>
                                 <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'job_postings.manage_applications' job.id %}">
+                                        <i class="fas fa-users"></i> Manage Applications ({{ job.applications.count }})
+                                    </a></li>
                                     <li><a class="dropdown-item" href="{% url 'job_postings.edit' job.id %}">
                                         <i class="fas fa-edit"></i> Edit Job
                                     </a></li>
@@ -82,9 +85,18 @@
                         <!-- Application Button -->
                         {% if user.is_authenticated and user.userprofile.user_type == 'job_seeker' %}
                             {% if user_has_applied %}
-                                <button class="btn btn-success" disabled>
-                                    <i class="fas fa-check"></i> Applied
-                                </button>
+                                {% for application in job.applications.all %}
+                                    {% if application.applicant == user %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge {{ application.get_status_display_class }} fs-6">
+                                                {{ application.get_status_display }}
+                                            </span>
+                                            <a href="{% url 'user_profiles.profile' %}" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i> Track Application
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
                             {% elif application_form %}
                                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyModal">
                                     <i class="fas fa-paper-plane"></i> Apply Now

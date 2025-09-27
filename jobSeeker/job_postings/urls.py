@@ -9,4 +9,6 @@ urlpatterns = [
     path('create/', views.create, name='job_postings.create'),
     path('<int:id>/edit/', views.edit, name='job_postings.edit'),
     path('<int:id>/delete/', views.delete, name='job_postings.delete'),
+    path('<int:id>/manage-applications/', views.manage_applications, name='job_postings.manage_applications'),
+    path('update-application-status/<int:application_id>/', views.update_application_status, name='job_postings.update_application_status'),
 ] 

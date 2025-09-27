@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
 from job_postings.models import JobApplication
@@ -21,7 +23,14 @@ def profile(request):
         education = job_seeker_profile.education.all()
         skills = job_seeker_profile.skills.all()
         links = job_seeker_profile.links.all()
-        applications = JobApplication.objects.filter(applicant=request.user).order_by('-applied_at')
+        # Get status filter from request
+        status_filter = request.GET.get('status', '')
+        applications = JobApplication.objects.filter(applicant=request.user)
+        
+        if status_filter:
+            applications = applications.filter(status=status_filter)
+        
+        applications = applications.order_by('-applied_at')
 
         template_data = {
             'profile': job_seeker_profile,
@@ -30,6 +39,8 @@ def profile(request):
             'skills': skills,
             'links': links,
             'applications': applications,
+            'status_filter': status_filter,
+            'status_choices': JobApplication.STATUS_CHOICES,
         }
 
         return render(request, 'user_profiles/profile.html', {'template_data': template_data})
@@ -151,3 +162,4 @@ def delete_link(request, link_id):
         link = get_object_or_404(Link, id=link_id, profile__user=request.user)
         link.delete()
     return redirect('user_profiles.profile')
+

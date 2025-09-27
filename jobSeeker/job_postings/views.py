@@ -192,3 +192,79 @@ def delete(request, id):
         return redirect('job_postings.index')
     
     return render(request, 'job_postings/delete.html', {'job': job})
+
+@login_required
+def manage_applications(request, id):
+    """
+    View for recruiters to manage applications for their job postings.
+    """
+    job = get_object_or_404(Job, id=id)
+    
+    # Check if user is the owner of the job and is a recruiter
+    if job.posted_by != request.user:
+        messages.error(request, 'You can only manage applications for your own job postings.')
+        return redirect('job_postings.show', id=id)
+    
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can manage applications.')
+        return redirect('job_postings.show', id=id)
+    
+    # Get status filter from request
+    status_filter = request.GET.get('status', '')
+    applications = job.applications.all()
+    
+    if status_filter:
+        applications = applications.filter(status=status_filter)
+    
+    applications = applications.order_by('-applied_at')
+    
+    return render(request, 'job_postings/manage_applications.html', {
+        'job': job,
+        'applications': applications,
+        'status_filter': status_filter,
+        'status_choices': JobApplication.STATUS_CHOICES,
+    })
+
+@login_required
+def update_application_status(request, application_id):
+    """
+    Updates the status of a job application.
+    Only the recruiter who posted the job can update application status.
+    """
+    if request.method == 'POST':
+        application = get_object_or_404(JobApplication, id=application_id)
+        
+        # Check if user is the recruiter who posted the job
+        if application.job.posted_by != request.user:
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'success': False, 'error': 'You can only update applications for your own job postings.'})
+            messages.error(request, 'You can only update applications for your own job postings.')
+            return redirect('job_postings.show', id=application.job.id)
+        
+        if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'success': False, 'error': 'Only recruiters can update application status.'})
+            messages.error(request, 'Only recruiters can update application status.')
+            return redirect('job_postings.show', id=application.job.id)
+        
+        new_status = request.POST.get('status')
+        
+        if new_status in dict(JobApplication.STATUS_CHOICES):
+            application.status = new_status
+            application.save()
+            
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Application status updated to {application.get_status_display()}',
+                    'new_status': new_status,
+                    'status_display': application.get_status_display()
+                })
+            
+            messages.success(request, f'Application status updated to {application.get_status_display()}')
+        else:
+            if request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'success': False, 'error': 'Invalid status'})
+            messages.error(request, 'Invalid status')
+    
+    return redirect('job_postings.manage_applications', id=application.job.id)
