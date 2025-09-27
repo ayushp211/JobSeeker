@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
+from job_postings.models import JobApplication
 from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm
 
 @login_required
@@ -20,6 +21,7 @@ def profile(request):
         education = job_seeker_profile.education.all()
         skills = job_seeker_profile.skills.all()
         links = job_seeker_profile.links.all()
+        applications = JobApplication.objects.filter(applicant=request.user).order_by('-applied_at')
 
         template_data = {
             'profile': job_seeker_profile,
@@ -27,6 +29,7 @@ def profile(request):
             'educations': education,
             'skills': skills,
             'links': links,
+            'applications': applications,
         }
 
         return render(request, 'user_profiles/profile.html', {'template_data': template_data})

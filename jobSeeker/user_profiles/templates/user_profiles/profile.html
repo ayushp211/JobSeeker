@@ -89,7 +89,7 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title fw-bold mb-0"><i class="fas fa-link me-2 text-primary"></i>Links</h4>
@@ -108,6 +108,32 @@
                             <p class="text-muted fst-italic">No links have been added yet.</p>
                         {% endfor %}
                     </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-paper-plane me-2 text-primary"></i>My Applications</h4>
+                    {% for application in template_data.applications %}
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ application.job.title }}</h6>
+                                    <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
+                                    <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
+                                </div>
+                                <a href="{% url 'job_postings.show' application.job.id %}" class="btn btn-outline-primary btn-sm">View Job</a>
+                            </div>
+                            {% if application.cover_note %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Your note:</small>
+                                    <p class="small">{{ application.cover_note|linebreaksbr|truncatewords:30 }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <p class="text-muted fst-italic">You haven't applied to any jobs yet. <a href="{% url 'job_postings.index' %}">Browse jobs</a> to get started!</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>

@@ -51,3 +51,16 @@ class Job(models.Model):
     
     def get_absolute_url(self):
         return reverse('job_postings.show', kwargs={'id': self.pk})
+
+class JobApplication(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
+    cover_note = models.TextField(help_text="Personalize your application with a tailored note")
+    applied_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('job', 'applicant')  # Prevent duplicate applications
+        ordering = ['-applied_at']
+    
+    def __str__(self):
+        return f"{self.applicant.username} applied to {self.job.title} at {self.job.company}"

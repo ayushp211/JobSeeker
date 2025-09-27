@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Job
+from .models import Job, JobApplication
 
 # Register your models here.
 
@@ -23,5 +23,21 @@ class JobAdmin(admin.ModelAdmin):
         }),
         ('Management', {
             'fields': ('posted_by', 'is_active', 'created_at', 'updated_at')
+        })
+    )
+
+@admin.register(JobApplication)
+class JobApplicationAdmin(admin.ModelAdmin):
+    list_display = ['job', 'applicant', 'applied_at']
+    list_filter = ['applied_at', 'job__company']
+    search_fields = ['job__title', 'job__company', 'applicant__username', 'applicant__first_name', 'applicant__last_name']
+    readonly_fields = ['applied_at']
+    
+    fieldsets = (
+        ('Application Details', {
+            'fields': ('job', 'applicant', 'applied_at')
+        }),
+        ('Cover Note', {
+            'fields': ('cover_note',)
         })
     )

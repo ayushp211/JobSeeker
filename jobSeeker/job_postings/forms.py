@@ -1,5 +1,5 @@
 from django import forms
-from .models import Job
+from .models import Job, JobApplication
 from user_profiles.models import Skill
 
 class JobForm(forms.ModelForm):
@@ -67,6 +67,23 @@ class JobForm(forms.ModelForm):
         # Make skills_required optional
         self.fields['skills_required'].required = False
         self.fields['skills_required'].queryset = Skill.objects.all().order_by('name')
+
+
+class JobApplicationForm(forms.ModelForm):
+    class Meta:
+        model = JobApplication
+        fields = ['cover_note']
+        widgets = {
+            'cover_note': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Write a personalized note to make your application stand out...',
+                'rows': 4
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['cover_note'].label = 'Tailored Note'
 
 
 class JobSearchForm(forms.Form):
