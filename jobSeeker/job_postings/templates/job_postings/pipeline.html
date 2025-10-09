@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load pipeline_extras %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-columns text-primary me-2"></i>
+                    Application Pipeline: {{ job.title }}
+                </h2>
+                <div>
+                    <a href="{% url 'job_postings.show' job.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Job
+                    </a>
+                </div>
+            </div>
+            
+            <div class="kanban-board">
+                <div class="row g-3">
+                    {% for status in statuses %}
+                    <div class="col-lg col-md-6">
+                        <div class="kanban-column" data-status-id="{{ status.id }}">
+                            <div class="kanban-header">
+                                <h5 class="mb-0 text-dark">
+                                    {{ status.name }}
+                                    <span class="badge bg-secondary ms-2">{{ applications_by_status|get:status|length }}</span>
+                                </h5>
+                            </div>
+                            <div class="kanban-body" 
+                                 data-status-id="{{ status.id }}"
+                                 ondrop="drop(event)" 
+                                 ondragover="allowDrop(event)"
+                                 ondragleave="dragLeave(event)">
+                                {% for application in applications_by_status|get:status %}
+                                    <div class="application-card" 
+                                         draggable="true" 
+                                         ondragstart="drag(event)"
+                                         data-application-id="{{ application.id }}">
+                                        <div class="applicant-name">
+                                            {{ application.applicant.get_full_name|default:application.applicant.username }}
+                                        </div>
+                                        <div class="applicant-email text-muted small">
+                                            <i class="fas fa-envelope me-1"></i>
+                                            {{ application.applicant.email }}
+                                        </div>
+                                        <div class="applied-date text-muted small mt-2">
+                                            <i class="fas fa-clock me-1"></i>
+                                            Applied {{ application.applied_at|timesince }} ago
+                                        </div>
+                                        {% if application.notes %}
+                                            <div class="notes-preview">
+                                                <i class="fas fa-sticky-note me-1"></i>
+                                                {{ application.notes|truncatechars:50 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% empty %}
+                                    <div class="empty-column text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                        <small>No applications</small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.kanban-board {
+    min-height: 70vh;
+}
+
+.kanban-column {
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-height: 500px;
+    height: 100%;
+}
+
+.kanban-header {
+    padding: 15px;
+    background: white;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.kanban-body {
+    padding: 15px;
+    min-height: 400px;
+    transition: background-color 0.2s ease;
+}
+
+.kanban-body.drag-over {
+    background-color: #e7f3ff;
+    border: 2px dashed #007bff;
+    border-radius: 4px;
+}
+
+.application-card {
+    background: white;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: grab;
+    transition: all 0.2s ease;
+    border-left: 3px solid #007bff;
+}
+
+.application-card:active {
+    cursor: grabbing;
+}
+
+.application-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.application-card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.applicant-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.notes-preview {
+    background: #f8f9fa;
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 0.85em;
+    color: #666;
+}
+
+.empty-column {
+    opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+    .kanban-column {
+        margin-bottom: 20px;
+    }
+}
+</style>
+
+<script>
+let draggedElement = null;
+
+function drag(event) {
+    draggedElement = event.target;
+    event.target.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application-id', event.target.dataset.applicationId);
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    event.currentTarget.classList.add('drag-over');
+}
+
+function dragLeave(event) {
+    event.currentTarget.classList.remove('drag-over');
+}
+
+function drop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    
+    const applicationId = event.dataTransfer.getData('application-id');
+    const newStatusId = event.currentTarget.dataset.statusId;
+    
+    if (draggedElement) {
+        // Remove the dragging class
+        draggedElement.classList.remove('dragging');
+        
+        // Move the card visually first for instant feedback
+        event.currentTarget.appendChild(draggedElement);
+        
+        // Update the status in the backend
+        updateStatus(applicationId, newStatusId);
+        
+        draggedElement = null;
+    }
+}
+
+function updateStatus(applicationId, statusId) {
+    fetch(`/jobs/update-pipeline-status/${applicationId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `status_id=${statusId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the counters
+            updateCounters();
+            showNotification('success', data.message);
+        } else {
+            showNotification('error', data.error || 'Failed to update status');
+            // Reload page if update failed to revert changes
+            setTimeout(() => window.location.reload(), 1500);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'An error occurred while updating the status');
+        setTimeout(() => window.location.reload(), 1500);
+    });
+}
+
+function updateCounters() {
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const statusId = column.dataset.statusId;
+        const count = column.querySelectorAll('.application-card').length;
+        const badge = column.querySelector('.badge');
+        if (badge) {
+            badge.textContent = count;
+        }
+        
+        // Show/hide empty message
+        const kanbanBody = column.querySelector('.kanban-body');
+        const cards = kanbanBody.querySelectorAll('.application-card');
+        const emptyMsg = kanbanBody.querySelector('.empty-column');
+        
+        if (cards.length === 0 && !emptyMsg) {
+            kanbanBody.innerHTML = `
+                <div class="empty-column text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                    <small>No applications</small>
+                </div>
+            `;
+        } else if (cards.length > 0 && emptyMsg) {
+            emptyMsg.remove();
+        }
+    });
+}
+
+function showNotification(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+// Prevent default drag behavior on document
+document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+});
+
+document.addEventListener('drop', function(e) {
+    e.preventDefault();
+});
+</script>
+
+{% endblock %}

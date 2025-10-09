@@ -11,4 +11,8 @@ urlpatterns = [
     path('<int:id>/delete/', views.delete, name='job_postings.delete'),
     path('<int:id>/manage-applications/', views.manage_applications, name='job_postings.manage_applications'),
     path('update-application-status/<int:application_id>/', views.update_application_status, name='job_postings.update_application_status'),
+    # Pipeline URLs
+    path('<int:id>/pipeline/', views.pipeline, name='job_postings.pipeline'),
+    path('update-pipeline-status/<int:application_id>/', views.update_pipeline_status, name='job_postings.update_pipeline_status'),
+    path('update-application-notes/<int:application_id>/', views.update_application_notes, name='job_postings.update_application_notes'),
 ] 

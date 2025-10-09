@@ -121,8 +121,8 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item {% if not template_data.status_filter %}active{% endif %}" href="?">All Applications</a></li>
-                                {% for value, label in template_data.status_choices %}
-                                    <li><a class="dropdown-item {% if template_data.status_filter == value %}active{% endif %}" href="?status={{ value }}">{{ label }}</a></li>
+                                {% for status in template_data.all_statuses %}
+                                    <li><a class="dropdown-item {% if template_data.status_filter == status.id|stringformat:'s' %}active{% endif %}" href="?status={{ status.id }}">{{ status.name }}</a></li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -146,7 +146,11 @@
                                             <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
                                         </div>
                                         <div class="text-end">
-                                            <span class="badge {{ application.get_status_display_class }} mb-2">{{ application.get_status_display }}</span>
+                                            {% if application.status %}
+                                                <span class="badge mb-2" style="background-color: {{ application.status.color }}; color: white;">{{ application.status.name }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary mb-2">No Status</span>
+                                            {% endif %}
                                             <br>
                                             <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
                                         </div>

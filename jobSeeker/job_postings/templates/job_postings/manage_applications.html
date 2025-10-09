@@ -27,8 +27,8 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item {% if not status_filter %}active{% endif %}" href="?">All Applications</a></li>
-                                {% for value, label in status_choices %}
-                                    <li><a class="dropdown-item {% if status_filter == value %}active{% endif %}" href="?status={{ value }}">{{ label }}</a></li>
+                                {% for status in all_statuses %}
+                                    <li><a class="dropdown-item {% if status_filter == status.id|stringformat:'s' %}active{% endif %}" href="?status={{ status.id }}">{{ status.name }}</a></li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -83,9 +83,15 @@
                                     <div class="text-end">
                                         <!-- Current Status -->
                                         <div class="mb-3">
-                                            <span class="badge {{ application.get_status_display_class }} fs-6">
-                                                {{ application.get_status_display }}
-                                            </span>
+                                            {% if application.status %}
+                                                <span class="badge fs-6" style="background-color: {{ application.status.color }}; color: white;">
+                                                    {{ application.status.name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary fs-6">
+                                                    No Status
+                                                </span>
+                                            {% endif %}
                                         </div>
                                         
                                         <!-- Status Update Dropdown -->
@@ -94,14 +100,15 @@
                                                 <i class="fas fa-edit me-1"></i> Update Status
                                             </button>
                                             <ul class="dropdown-menu">
-                                                {% for value, label in status_choices %}
-                                                    {% if value != application.status %}
+                                                {% for status in all_statuses %}
+                                                    {% if application.status.id != status.id %}
                                                         <li>
                                                             <form method="post" action="{% url 'job_postings.update_application_status' application.id %}" class="d-inline">
                                                                 {% csrf_token %}
-                                                                <input type="hidden" name="status" value="{{ value }}">
-                                                                <button type="submit" class="dropdown-item" onclick="return confirm('Change status to {{ label }}?')">
-                                                                    {{ label }}
+                                                                <input type="hidden" name="status_id" value="{{ status.id }}">
+                                                                <button type="submit" class="dropdown-item" onclick="return confirm('Change status to {{ status.name }}?')">
+                                                                    <span class="badge me-2" style="background-color: {{ status.color }}; color: white;">●</span>
+                                                                    {{ status.name }}
                                                                 </button>
                                                             </form>
                                                         </li>

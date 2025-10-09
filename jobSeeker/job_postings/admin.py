@@ -1,7 +1,13 @@
 from django.contrib import admin
-from .models import Job, JobApplication
+from .models import Job, JobApplication, ApplicationStatus
 
 # Register your models here.
+
+@admin.register(ApplicationStatus)
+class ApplicationStatusAdmin(admin.ModelAdmin):
+    list_display = ['name', 'order', 'color']
+    list_editable = ['order', 'color']
+    ordering = ['order']
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
@@ -28,16 +34,20 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(JobApplication)
 class JobApplicationAdmin(admin.ModelAdmin):
-    list_display = ['job', 'applicant', 'applied_at']
-    list_filter = ['applied_at', 'job__company']
+    list_display = ['job', 'applicant', 'status', 'applied_at']
+    list_filter = ['status', 'applied_at', 'job__company']
     search_fields = ['job__title', 'job__company', 'applicant__username', 'applicant__first_name', 'applicant__last_name']
-    readonly_fields = ['applied_at']
+    readonly_fields = ['applied_at', 'status_updated_at']
     
     fieldsets = (
         ('Application Details', {
-            'fields': ('job', 'applicant', 'applied_at')
+            'fields': ('job', 'applicant', 'status', 'applied_at', 'status_updated_at')
         }),
         ('Cover Note', {
             'fields': ('cover_note',)
+        }),
+        ('Internal Notes', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
         })
     )

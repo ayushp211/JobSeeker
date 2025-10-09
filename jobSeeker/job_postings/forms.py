@@ -1,5 +1,5 @@
 from django import forms
-from .models import Job, JobApplication
+from .models import Job, JobApplication, ApplicationStatus
 from user_profiles.models import Skill
 
 class JobForm(forms.ModelForm):
@@ -159,3 +159,29 @@ class JobSearchForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['skills'].queryset = Skill.objects.all().order_by('name')
+
+
+class ApplicationStatusForm(forms.ModelForm):
+    """Form for creating and editing pipeline statuses"""
+    class Meta:
+        model = ApplicationStatus
+        fields = ['name', 'order', 'color']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter status name (e.g., Phone Screen, Interview, Offer)'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter order number (lower numbers appear first)',
+                'min': '0'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'form-control',
+                'type': 'color'
+            })
+        }
+        help_texts = {
+            'order': 'Statuses are displayed in the pipeline from left to right based on order.',
+            'color': 'Choose a color for this status in the pipeline.'
+        }

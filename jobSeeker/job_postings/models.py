@@ -5,6 +5,22 @@ from user_profiles.models import Skill
 
 # Create your models here.
 
+class ApplicationStatus(models.Model):
+    """
+    Represents a status in the application pipeline (e.g., Applied, Interview, Offer).
+    Recruiters can customize these statuses to match their hiring process.
+    """
+    name = models.CharField(max_length=50, unique=True)
+    order = models.PositiveIntegerField(default=0, help_text="Order in which this status appears in the pipeline")
+    color = models.CharField(max_length=7, default='#007bff', help_text="Hex color code for the status")
+    
+    class Meta:
+        ordering = ['order']
+        verbose_name_plural = 'Application Statuses'
+    
+    def __str__(self):
+        return self.name
+
 class Job(models.Model):
     JOB_TYPE_CHOICES = [
         ('full_time', 'Full Time'),
@@ -53,20 +69,23 @@ class Job(models.Model):
         return reverse('job_postings.show', kwargs={'id': self.pk})
 
 class JobApplication(models.Model):
-    STATUS_CHOICES = [
-        ('applied', 'Applied'),
-        ('review', 'Under Review'),
-        ('interview', 'Interview'),
-        ('offer', 'Offer'),
-        ('closed', 'Closed'),
-    ]
-    
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
     applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
     cover_note = models.TextField(help_text="Personalize your application with a tailored note")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    status = models.ForeignKey(ApplicationStatus, on_delete=models.CASCADE, related_name='applications', null=True, blank=True)
+    notes = models.TextField(blank=True, help_text="Internal notes for recruiters")
     applied_at = models.DateTimeField(auto_now_add=True)
     status_updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        # Auto-assign "Applied" status if no status is set
+        if not self.status_id:
+            try:
+                applied_status = ApplicationStatus.objects.get(name='Applied')
+                self.status = applied_status
+            except ApplicationStatus.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
     
     class Meta:
         unique_together = ('job', 'applicant')  # Prevent duplicate applications
@@ -77,11 +96,7 @@ class JobApplication(models.Model):
     
     def get_status_display_class(self):
         """Return Bootstrap CSS class for status badge"""
-        status_classes = {
-            'applied': 'bg-primary',
-            'review': 'bg-warning',
-            'interview': 'bg-info',
-            'offer': 'bg-success',
-            'closed': 'bg-secondary',
-        }
-        return status_classes.get(self.status, 'bg-secondary')
+        if not self.status:
+            return 'bg-secondary'
+        # You can customize colors per status or use the status.color field
+        return 'bg-primary'

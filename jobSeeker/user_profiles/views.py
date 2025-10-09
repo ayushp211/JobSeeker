@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
-from job_postings.models import JobApplication
+from job_postings.models import JobApplication, ApplicationStatus
 from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm
 
 @login_required
@@ -28,9 +28,12 @@ def profile(request):
         applications = JobApplication.objects.filter(applicant=request.user)
         
         if status_filter:
-            applications = applications.filter(status=status_filter)
+            applications = applications.filter(status__id=status_filter)
         
         applications = applications.order_by('-applied_at')
+        
+        # Get all available statuses for the filter dropdown
+        all_statuses = ApplicationStatus.objects.all().order_by('order')
 
         template_data = {
             'profile': job_seeker_profile,
@@ -40,7 +43,7 @@ def profile(request):
             'links': links,
             'applications': applications,
             'status_filter': status_filter,
-            'status_choices': JobApplication.STATUS_CHOICES,
+            'all_statuses': all_statuses,
         }
 
         return render(request, 'user_profiles/profile.html', {'template_data': template_data})

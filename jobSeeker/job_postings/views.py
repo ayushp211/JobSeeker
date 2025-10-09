@@ -4,8 +4,9 @@ from django.contrib import messages
 from django.http import Http404, JsonResponse
 from django.db.models import Q
 from django.db import IntegrityError
-from .models import Job, JobApplication
-from .forms import JobForm, JobSearchForm, JobApplicationForm
+from collections import defaultdict
+from .models import Job, JobApplication, ApplicationStatus
+from .forms import JobForm, JobSearchForm, JobApplicationForm, ApplicationStatusForm
 
 def index(request):
     jobs = Job.objects.filter(is_active=True)
@@ -214,15 +215,18 @@ def manage_applications(request, id):
     applications = job.applications.all()
     
     if status_filter:
-        applications = applications.filter(status=status_filter)
+        applications = applications.filter(status__id=status_filter)
     
     applications = applications.order_by('-applied_at')
+    
+    # Get all available statuses for the filter dropdown
+    all_statuses = ApplicationStatus.objects.all().order_by('order')
     
     return render(request, 'job_postings/manage_applications.html', {
         'job': job,
         'applications': applications,
         'status_filter': status_filter,
-        'status_choices': JobApplication.STATUS_CHOICES,
+        'all_statuses': all_statuses,
     })
 
 @login_required
@@ -230,6 +234,7 @@ def update_application_status(request, application_id):
     """
     Updates the status of a job application.
     Only the recruiter who posted the job can update application status.
+    This is kept for backward compatibility but status is now managed via pipeline.
     """
     if request.method == 'POST':
         application = get_object_or_404(JobApplication, id=application_id)
@@ -247,24 +252,134 @@ def update_application_status(request, application_id):
             messages.error(request, 'Only recruiters can update application status.')
             return redirect('job_postings.show', id=application.job.id)
         
-        new_status = request.POST.get('status')
+        status_id = request.POST.get('status_id')
         
-        if new_status in dict(JobApplication.STATUS_CHOICES):
-            application.status = new_status
-            application.save()
-            
-            if request.headers.get('Content-Type') == 'application/json':
-                return JsonResponse({
-                    'success': True, 
-                    'message': f'Application status updated to {application.get_status_display()}',
-                    'new_status': new_status,
-                    'status_display': application.get_status_display()
-                })
-            
-            messages.success(request, f'Application status updated to {application.get_status_display()}')
+        if status_id:
+            try:
+                new_status = ApplicationStatus.objects.get(id=status_id)
+                application.status = new_status
+                application.save()
+                
+                if request.headers.get('Content-Type') == 'application/json':
+                    return JsonResponse({
+                        'success': True, 
+                        'message': f'Application status updated to {new_status.name}',
+                        'new_status': new_status.id,
+                        'status_display': new_status.name
+                    })
+                
+                messages.success(request, f'Application status updated to {new_status.name}')
+            except ApplicationStatus.DoesNotExist:
+                if request.headers.get('Content-Type') == 'application/json':
+                    return JsonResponse({'success': False, 'error': 'Invalid status'})
+                messages.error(request, 'Invalid status')
         else:
             if request.headers.get('Content-Type') == 'application/json':
-                return JsonResponse({'success': False, 'error': 'Invalid status'})
-            messages.error(request, 'Invalid status')
+                return JsonResponse({'success': False, 'error': 'No status provided'})
+            messages.error(request, 'No status provided')
     
     return redirect('job_postings.manage_applications', id=application.job.id)
+
+@login_required
+def pipeline(request, id):
+    """
+    Kanban board view showing applications for a specific job organized by status.
+    Only accessible to recruiters who own the job.
+    """
+    job = get_object_or_404(Job, id=id)
+    
+    # Check if user is the owner of the job and is a recruiter
+    if job.posted_by != request.user:
+        messages.error(request, 'You can only view the pipeline for your own job postings.')
+        return redirect('job_postings.show', id=id)
+    
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can access the pipeline.')
+        return redirect('job_postings.show', id=id)
+    
+    # Get all statuses ordered by their order field (fixed 5 statuses)
+    statuses = ApplicationStatus.objects.all().order_by('order')
+    
+    # Get all applications for this specific job
+    all_applications = job.applications.select_related('applicant', 'status')
+    
+    # Organize applications by status
+    applications_by_status = defaultdict(list)
+    
+    for application in all_applications:
+        if application.status:
+            applications_by_status[application.status].append(application)
+    
+    return render(request, 'job_postings/pipeline.html', {
+        'job': job,
+        'statuses': statuses,
+        'applications_by_status': dict(applications_by_status),
+    })
+
+@login_required
+def update_pipeline_status(request, application_id):
+    """
+    AJAX endpoint to update the status of an application in the pipeline.
+    Only the recruiter who posted the job can update application status.
+    """
+    if request.method == 'POST':
+        application = get_object_or_404(JobApplication, id=application_id)
+        
+        # Check if user is the recruiter who posted the job
+        if application.job.posted_by != request.user:
+            return JsonResponse({'success': False, 'error': 'You can only update applications for your own job postings.'})
+        
+        if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+            return JsonResponse({'success': False, 'error': 'Only recruiters can update application status.'})
+        
+        status_id = request.POST.get('status_id')
+        
+        if status_id:
+            try:
+                new_status = ApplicationStatus.objects.get(id=status_id)
+                application.status = new_status
+                application.save()
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Application status updated to {new_status.name}'
+                })
+            except ApplicationStatus.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Invalid status'})
+        else:
+            # Setting status to null
+            application.status = None
+            application.save()
+            return JsonResponse({
+                'success': True, 
+                'message': 'Application status cleared'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def update_application_notes(request, application_id):
+    """
+    AJAX endpoint to update internal notes for an application.
+    Only the recruiter who posted the job can update notes.
+    """
+    if request.method == 'POST':
+        application = get_object_or_404(JobApplication, id=application_id)
+        
+        # Check if user is the recruiter who posted the job
+        if application.job.posted_by != request.user:
+            return JsonResponse({'success': False, 'error': 'You can only update applications for your own job postings.'})
+        
+        if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+            return JsonResponse({'success': False, 'error': 'Only recruiters can update application notes.'})
+        
+        notes = request.POST.get('notes', '')
+        application.notes = notes
+        application.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Notes updated successfully',
+            'notes': notes
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
