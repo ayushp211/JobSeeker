@@ -15,4 +15,5 @@ urlpatterns = [
     path('<int:id>/pipeline/', views.pipeline, name='job_postings.pipeline'),
     path('update-pipeline-status/<int:application_id>/', views.update_pipeline_status, name='job_postings.update_pipeline_status'),
     path('update-application-notes/<int:application_id>/', views.update_application_notes, name='job_postings.update_application_notes'),
+    path('job/<int:job_id>/applicant/<int:user_id>/', views.view_applicant_profile, name='view_applicant_profile'),
 ] 

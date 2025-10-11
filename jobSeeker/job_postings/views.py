@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from collections import defaultdict
 from .models import Job, JobApplication, ApplicationStatus
 from .forms import JobForm, JobSearchForm, JobApplicationForm, ApplicationStatusForm
+from user_profiles.models import JobSeekerProfile
 
 def index(request):
     jobs = Job.objects.filter(is_active=True)
@@ -383,3 +384,28 @@ def update_application_notes(request, application_id):
         })
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+@login_required
+def view_applicant_profile(request, job_id, user_id): # Updated function signature
+    """
+    Allows a recruiter to view the profile of a job seeker who has
+    applied to one of their jobs.
+    """
+    job = get_object_or_404(Job, id=job_id, posted_by=request.user)
+    has_applied_to_this_job = JobApplication.objects.filter(
+        job=job,
+        applicant_id=user_id
+    ).exists()
+
+    if not has_applied_to_this_job:
+        messages.error(request, 'This user has not applied to your job posting.')
+        return redirect('job_postings.manage_applications', id=job.id)
+
+    profile = get_object_or_404(JobSeekerProfile, user_id=user_id)
+    
+    context = {
+        'profile': profile,
+        'job': job,
+    }
+    
+    return render(request, 'job_postings/applicant_profile.html', context)
