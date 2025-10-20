@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-comments text-primary me-2"></i>
+                        {{ template_data.conversation.subject }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Conversation with 
+                        <strong>{{ template_data.other_participant.get_full_name|default:template_data.other_participant.username }}</strong>
+                        {% if template_data.conversation.job %}
+                            about <a href="{% url 'job_postings.show' template_data.conversation.job.id %}" class="text-decoration-none">{{ template_data.conversation.job.title }}</a>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'messaging.inbox' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Inbox
+                    </a>
+                    <a href="{% url 'messaging.close_conversation' template_data.conversation.id %}" 
+                       class="btn btn-outline-danger"
+                       onclick="return confirm('Are you sure you want to close this conversation?')">
+                        <i class="fas fa-times"></i> Close
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body p-0">
+                    <!-- Messages Area -->
+                    <div id="messages-container" class="messages-container" style="height: 500px; overflow-y: auto; padding: 20px;">
+                        {% for message in template_data.messages %}
+                            <div class="message-item mb-3 {% if message.sender == user %}message-sent{% else %}message-received{% endif %}">
+                                <div class="d-flex {% if message.sender == user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                    <div class="message-bubble {% if message.sender == user %}bg-primary text-white{% else %}bg-light{% endif %}" style="max-width: 70%;">
+                                        <div class="message-header d-flex justify-content-between align-items-center mb-2">
+                                            <strong class="message-sender">
+                                                {{ message.sender.get_full_name|default:message.sender.username }}
+                                            </strong>
+                                            <small class="message-time {% if message.sender == user %}text-white-50{% else %}text-muted{% endif %}">
+                                                {{ message.created_at|date:"M d, Y" }} at {{ message.created_at|time:"g:i A" }}
+                                            </small>
+                                        </div>
+                                        <div class="message-content">
+                                            {{ message.content|linebreaksbr }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center text-muted py-5">
+                                <i class="fas fa-comment-slash fa-3x mb-3"></i>
+                                <p>No messages yet. Start the conversation!</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Message Input Area -->
+                    <div class="message-input-area border-top p-3">
+                        <form id="message-form" method="post">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                {{ template_data.form.content }}
+                                <button type="submit" class="btn btn-primary" id="send-button">
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.messages-container {
+    background-color: #f8f9fa;
+}
+
+.message-bubble {
+    padding: 12px 16px;
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    word-wrap: break-word;
+}
+
+.message-sent .message-bubble {
+    background-color: #007bff !important;
+    color: white;
+}
+
+.message-received .message-bubble {
+    background-color: #e9ecef;
+    color: #333;
+}
+
+.message-header {
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.message-content {
+    line-height: 1.4;
+}
+
+.message-input-area {
+    background-color: white;
+}
+
+#id_content {
+    resize: none;
+    border-radius: 20px 0 0 20px;
+}
+
+#send-button {
+    border-radius: 0 20px 20px 0;
+}
+
+/* Auto-scroll to bottom */
+.messages-container {
+    scroll-behavior: smooth;
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.getElementById('messages-container');
+    const messageForm = document.getElementById('message-form');
+    const sendButton = document.getElementById('send-button');
+    const messageInput = document.getElementById('id_content');
+    
+    // Auto-scroll to bottom on page load
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    // Handle form submission with AJAX
+    messageForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const messageContent = messageInput.value.trim();
+        if (!messageContent) return;
+        
+        // Show loading state
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        
+        // Send message via AJAX
+        fetch('{% url "messaging.send_message_ajax" template_data.conversation.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `content=${encodeURIComponent(messageContent)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add new message to the UI
+                addMessageToUI(data);
+                // Clear input
+                messageInput.value = '';
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while sending the message.');
+        })
+        .finally(() => {
+            // Reset button state
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+        });
+    });
+    
+    function addMessageToUI(data) {
+        const messagesContainer = document.getElementById('messages-container');
+        
+        // Remove empty state if it exists
+        const emptyState = messagesContainer.querySelector('.text-center.text-muted');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Create new message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-item mb-3 message-sent';
+        messageDiv.innerHTML = `
+            <div class="d-flex justify-content-end">
+                <div class="message-bubble bg-primary text-white" style="max-width: 70%;">
+                    <div class="message-header d-flex justify-content-between align-items-center mb-2">
+                        <strong class="message-sender">${data.sender_full_name}</strong>
+                        <small class="message-time text-white-50">${data.created_at_display}</small>
+                    </div>
+                    <div class="message-content">${data.content.replace(/\n/g, '<br>')}</div>
+                </div>
+            </div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+    }
+    
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Focus on message input
+    messageInput.focus();
+});
+</script>
+{% endblock content %}

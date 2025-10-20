@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-times-circle text-danger me-2"></i>
+                        Close Conversation
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Are you sure you want to close this conversation?</strong>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Conversation Details:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Subject:</strong> {{ template_data.conversation.subject }}</li>
+                            <li><strong>With:</strong> {{ template_data.conversation.get_other_participant.user.get_full_name|default:template_data.conversation.get_other_participant.user.username }}</li>
+                            {% if template_data.conversation.job %}
+                                <li><strong>Job:</strong> {{ template_data.conversation.job.title }} at {{ template_data.conversation.job.company }}</li>
+                            {% endif %}
+                            <li><strong>Started:</strong> {{ template_data.conversation.created_at|date:"M d, Y" }}</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Closing a conversation will:
+                        <ul class="mb-0 mt-2">
+                            <li>Hide it from your inbox</li>
+                            <li>Prevent new messages from being sent</li>
+                            <li>Keep the conversation history for reference</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'messaging.conversation_detail' template_data.conversation.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Close Conversation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

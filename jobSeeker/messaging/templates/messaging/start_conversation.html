@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-comment-plus text-primary me-2"></i>
+                        Start New Conversation
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="me-3">
+                                <i class="fas fa-user-tie text-primary fa-2x"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">Contacting: {{ template_data.job_seeker.get_full_name|default:template_data.job_seeker.username }}</h5>
+                                <p class="text-muted mb-0">{{ template_data.job_seeker.email }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if template_data.job %}
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-briefcase me-2"></i>
+                                    Related Job Application
+                                </h6>
+                                <p class="mb-2">
+                                    <strong>{{ template_data.job.title }}</strong> at {{ template_data.job.company }}
+                                </p>
+                                <p class="mb-0">
+                                    <small class="text-muted">
+                                        This conversation will be linked to the job posting for easy reference.
+                                    </small>
+                                </p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ template_data.form.subject.id_for_label }}" class="form-label">
+                                <i class="fas fa-tag me-1"></i>
+                                {{ template_data.form.subject.label }}
+                            </label>
+                            {{ template_data.form.subject }}
+                            {% if template_data.form.subject.help_text %}
+                                <div class="form-text">{{ template_data.form.subject.help_text }}</div>
+                            {% endif %}
+                            {% if template_data.form.subject.errors %}
+                                <div class="text-danger">
+                                    {% for error in template_data.form.subject.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'messaging.inbox' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Start Conversation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Conversation Guidelines -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Conversation Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Be professional and respectful in all communications
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Clearly state the purpose of your conversation
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Provide relevant details about the opportunity
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Respond promptly to maintain candidate engagement
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

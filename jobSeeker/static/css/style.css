@@ -1,0 +1,60 @@
+/* Job Seeker Platform Custom Styles */
+
+.ms-footer {
+    background-color: #343a40;
+}
+
+.ms-footer-bottom {
+    background-color: #212529;
+}
+
+.img-card-200 {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+}
+
+.img-card-400 {
+    width: 400px;
+    height: 400px;
+    object-fit: cover;
+}
+
+.navbar-ml {
+    margin-left: auto;
+}
+
+/* Custom button styles */
+.btn-primary-custom {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary-custom:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Job card styling */
+.job-card {
+    transition: transform 0.2s;
+}
+
+.job-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Profile styling */
+.profile-section {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Form styling */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+} 
