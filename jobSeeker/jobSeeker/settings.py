@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'job_postings',
     'user_accounts',
     'user_profiles',
+    'messaging',
 ]
 
 MIDDLEWARE = [

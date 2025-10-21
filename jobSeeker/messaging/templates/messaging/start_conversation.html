@@ -1,108 +1,288 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i class="fas fa-comment-plus text-primary me-2"></i>
-                        Start New Conversation
-                    </h4>
+        <div class="col-lg-8 col-xl-6">
+            <!-- Main Form Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="conversation-icon me-3">
+                            <i class="fas fa-comment-plus fa-2x"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-1 fw-bold">Start New Conversation</h3>
+                            <p class="mb-0 opacity-75">Connect with candidates professionally</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="me-3">
-                                <i class="fas fa-user-tie text-primary fa-2x"></i>
+                <div class="card-body p-4">
+                    <!-- Candidate Info Section -->
+                    <div class="candidate-info mb-4">
+                        <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                            <div class="candidate-avatar me-3">
+                                <div class="avatar-circle jobseeker-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
                             </div>
-                            <div>
-                                <h5 class="mb-1">Contacting: {{ template_data.job_seeker.get_full_name|default:template_data.job_seeker.username }}</h5>
-                                <p class="text-muted mb-0">{{ template_data.job_seeker.email }}</p>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1 fw-semibold text-dark">
+                                    {{ template_data.job_seeker.get_full_name|default:template_data.job_seeker.username }}
+                                </h5>
+                                <p class="text-muted mb-0">
+                                    <i class="fas fa-envelope me-1"></i>
+                                    {{ template_data.job_seeker.email }}
+                                </p>
+                            </div>
+                            <div class="candidate-badge">
+                                <span class="badge bg-success fs-6">
+                                    <i class="fas fa-user me-1"></i>Job Seeker
+                                </span>
                             </div>
                         </div>
                         
                         {% if template_data.job %}
-                            <div class="alert alert-info">
-                                <h6 class="alert-heading">
-                                    <i class="fas fa-briefcase me-2"></i>
-                                    Related Job Application
-                                </h6>
-                                <p class="mb-2">
-                                    <strong>{{ template_data.job.title }}</strong> at {{ template_data.job.company }}
-                                </p>
-                                <p class="mb-0">
-                                    <small class="text-muted">
-                                        This conversation will be linked to the job posting for easy reference.
-                                    </small>
-                                </p>
+                            <div class="job-context mt-3">
+                                <div class="alert alert-info border-0 shadow-sm">
+                                    <div class="d-flex align-items-start">
+                                        <div class="job-icon me-3">
+                                            <i class="fas fa-briefcase fa-lg text-primary"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="alert-heading fw-semibold mb-2">
+                                                Related Job Application
+                                            </h6>
+                                            <p class="mb-2 fw-medium">
+                                                <strong>{{ template_data.job.title }}</strong> at {{ template_data.job.company }}
+                                            </p>
+                                            <p class="mb-0 text-muted small">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                This conversation will be linked to the job posting for easy reference.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         {% endif %}
                     </div>
                     
-                    <form method="post">
+                    <!-- Form Section -->
+                    <form method="post" class="conversation-form">
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="{{ template_data.form.subject.id_for_label }}" class="form-label">
-                                <i class="fas fa-tag me-1"></i>
+                        <div class="form-group mb-4">
+                            <label for="{{ template_data.form.subject.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-tag text-primary me-2"></i>
                                 {{ template_data.form.subject.label }}
                             </label>
-                            {{ template_data.form.subject }}
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-heading text-muted"></i>
+                                </span>
+                                {{ template_data.form.subject }}
+                            </div>
                             {% if template_data.form.subject.help_text %}
-                                <div class="form-text">{{ template_data.form.subject.help_text }}</div>
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    {{ template_data.form.subject.help_text }}
+                                </div>
                             {% endif %}
                             {% if template_data.form.subject.errors %}
-                                <div class="text-danger">
+                                <div class="text-danger mt-2">
                                     {% for error in template_data.form.subject.errors %}
-                                        <small>{{ error }}</small>
+                                        <small><i class="fas fa-exclamation-triangle me-1"></i>{{ error }}</small>
                                     {% endfor %}
                                 </div>
                             {% endif %}
                         </div>
                         
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'messaging.inbox' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left"></i> Cancel
+                        <div class="form-actions d-flex justify-content-between align-items-center">
+                            <a href="{% url 'messaging.inbox' %}" class="btn btn-outline-secondary btn-lg rounded-pill px-4">
+                                <i class="fas fa-arrow-left me-2"></i> Cancel
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Start Conversation
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill px-4">
+                                <i class="fas fa-paper-plane me-2"></i> Start Conversation
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
             
-            <!-- Conversation Guidelines -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="fas fa-lightbulb text-warning me-2"></i>
-                        Conversation Guidelines
-                    </h6>
+            <!-- Guidelines Card -->
+            <div class="card mt-4 shadow-sm border-0">
+                <div class="card-header bg-light border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="guidelines-icon me-3">
+                            <i class="fas fa-lightbulb text-warning fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-semibold text-dark">Conversation Guidelines</h5>
+                            <p class="mb-0 text-muted small">Best practices for professional communication</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Be professional and respectful in all communications
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Clearly state the purpose of your conversation
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Provide relevant details about the opportunity
-                        </li>
-                        <li class="mb-0">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Respond promptly to maintain candidate engagement
-                        </li>
-                    </ul>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-3 d-flex align-items-start">
+                                    <div class="guideline-icon me-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark">Be Professional</strong>
+                                        <p class="text-muted small mb-0">Maintain a respectful and courteous tone</p>
+                                    </div>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <div class="guideline-icon me-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark">Clear Purpose</strong>
+                                        <p class="text-muted small mb-0">State your intentions clearly and concisely</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-3 d-flex align-items-start">
+                                    <div class="guideline-icon me-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark">Provide Details</strong>
+                                        <p class="text-muted small mb-0">Share relevant information about the opportunity</p>
+                                    </div>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <div class="guideline-icon me-3">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark">Respond Promptly</strong>
+                                        <p class="text-muted small mb-0">Maintain engagement with timely responses</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* Enhanced Start Conversation Styling */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3) !important;
+}
+
+.conversation-icon {
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.candidate-avatar .avatar-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+}
+
+.jobseeker-avatar {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.job-context .alert {
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+}
+
+.job-icon {
+    animation: pulse 2s infinite;
+}
+
+.conversation-form .form-group {
+    position: relative;
+}
+
+.conversation-form .input-group-text {
+    border-radius: 0.5rem 0 0 0.5rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.conversation-form #id_subject {
+    border-radius: 0 0.5rem 0.5rem 0;
+    border-left: none;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.conversation-form #id_subject:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #007bff;
+}
+
+.form-actions .btn {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.guidelines-icon {
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 5px rgba(255, 193, 7, 0.5); }
+    to { text-shadow: 0 0 20px rgba(255, 193, 7, 0.8); }
+}
+
+.guideline-icon {
+    font-size: 1.2rem;
+    margin-top: 0.1rem;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .form-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+    
+    .candidate-info .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .candidate-badge {
+        margin-top: 1rem;
+    }
+}
+</style>
 {% endblock content %}

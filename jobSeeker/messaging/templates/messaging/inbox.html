@@ -1,132 +1,425 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">
-            <i class="fas fa-envelope text-primary me-2"></i>
-            Messages
-        </h2>
-        <div class="d-flex gap-2">
-            <span class="badge bg-primary" id="unread-count-badge" style="display: none;">
-                <i class="fas fa-bell"></i> <span id="unread-count">0</span>
-            </span>
+<div class="container-fluid mt-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-1 fw-bold text-dark">
+                        <i class="fas fa-envelope text-primary me-3"></i>
+                        Messages
+                    </h1>
+                    <p class="text-muted mb-0">Stay connected with candidates and recruiters</p>
+                </div>
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="position-relative">
+                        <span class="badge bg-danger rounded-pill fs-6 px-3 py-2" id="unread-count-badge" style="display: none;">
+                            <i class="fas fa-bell me-2"></i> 
+                            <span id="unread-count">0</span> unread
+                        </span>
+                    </div>
+                    <button class="btn btn-outline-primary" onclick="updateUnreadCount()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     
     {% if template_data.conversations %}
         <div class="row">
             <div class="col-12">
-                <div class="card">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0 fw-semibold text-dark">
+                            <i class="fas fa-comments text-primary me-2"></i>
+                            Active Conversations
+                        </h5>
+                    </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Conversation</th>
-                                        <th>Subject</th>
-                                        <th>Job</th>
-                                        <th>Last Message</th>
-                                        <th>Unread</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for conversation in template_data.conversations %}
-                                        <tr class="{% if conversation.unread_count > 0 %}table-warning{% endif %}">
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="me-3">
+                        <div class="conversation-list">
+                            {% for conversation in template_data.conversations %}
+                                <div class="conversation-item {% if conversation.unread_count > 0 %}unread{% endif %}" 
+                                     onclick="window.location.href='{% url 'messaging.conversation_detail' conversation.id %}'">
+                                    <div class="d-flex align-items-center p-4 border-bottom">
+                                        <!-- Avatar Section -->
+                                        <div class="conversation-avatar me-3">
+                                            <div class="avatar-circle {% if template_data.user_type == 'recruiter' %}recruiter-avatar{% else %}jobseeker-avatar{% endif %}">
+                                                {% if template_data.user_type == 'recruiter' %}
+                                                    <i class="fas fa-user-tie"></i>
+                                                {% else %}
+                                                    <i class="fas fa-user"></i>
+                                                {% endif %}
+                                            </div>
+                                            {% if conversation.unread_count > 0 %}
+                                                <div class="unread-indicator"></div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Content Section -->
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <h6 class="mb-1 fw-semibold text-dark">
+                                                        {{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}
+                                                    </h6>
+                                                    <span class="badge bg-light text-dark border">
                                                         {% if template_data.user_type == 'recruiter' %}
-                                                            <i class="fas fa-user-tie text-primary fa-lg"></i>
+                                                            <i class="fas fa-user me-1"></i>Job Seeker
                                                         {% else %}
-                                                            <i class="fas fa-user text-primary fa-lg"></i>
+                                                            <i class="fas fa-user-tie me-1"></i>Recruiter
                                                         {% endif %}
-                                                    </div>
-                                                    <div>
-                                                        <strong>{{ conversation.get_other_participant.user.get_full_name|default:conversation.get_other_participant.user.username }}</strong>
-                                                        <br>
-                                                        <small class="text-muted">
-                                                            {% if template_data.user_type == 'recruiter' %}
-                                                                Job Seeker
-                                                            {% else %}
-                                                                Recruiter
-                                                            {% endif %}
-                                                        </small>
-                                                    </div>
+                                                    </span>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <strong>{{ conversation.subject }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ conversation.created_at|date:"M d, Y" }}</small>
-                                            </td>
-                                            <td>
-                                                {% if conversation.job %}
-                                                    <a href="{% url 'job_postings.show' conversation.job.id %}" class="text-decoration-none">
-                                                        {{ conversation.job.title }}
-                                                        <br>
-                                                        <small class="text-muted">{{ conversation.job.company }}</small>
-                                                    </a>
-                                                {% else %}
-                                                    <span class="text-muted">General inquiry</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if conversation.get_latest_message %}
-                                                    <div class="text-truncate" style="max-width: 200px;">
-                                                        {{ conversation.get_latest_message.content|truncatewords:10 }}
-                                                    </div>
-                                                    <small class="text-muted">
-                                                        {{ conversation.get_latest_message.created_at|timesince }} ago
+                                                <div class="text-end">
+                                                    {% if conversation.unread_count > 0 %}
+                                                        <span class="badge bg-danger rounded-pill">{{ conversation.unread_count }}</span>
+                                                    {% endif %}
+                                                    <small class="text-muted d-block mt-1">
+                                                        {{ conversation.updated_at|timesince }} ago
                                                     </small>
-                                                {% else %}
-                                                    <span class="text-muted">No messages yet</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if conversation.unread_count > 0 %}
-                                                    <span class="badge bg-danger">{{ conversation.unread_count }}</span>
-                                                {% else %}
-                                                    <span class="text-muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="{% url 'messaging.conversation_detail' conversation.id %}" 
-                                                       class="btn btn-primary btn-sm">
-                                                        <i class="fas fa-comments"></i> Open
-                                                    </a>
-                                                    <a href="{% url 'messaging.close_conversation' conversation.id %}" 
-                                                       class="btn btn-outline-danger btn-sm"
-                                                       onclick="return confirm('Are you sure you want to close this conversation?')">
-                                                        <i class="fas fa-times"></i>
-                                                    </a>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                            </div>
+                                            
+                                            <h6 class="mb-2 text-dark fw-medium">{{ conversation.subject }}</h6>
+                                            
+                                            {% if conversation.job %}
+                                                <div class="job-context mb-2">
+                                                    <i class="fas fa-briefcase text-primary me-2"></i>
+                                                    <a href="{% url 'job_postings.show' conversation.job.id %}" 
+                                                       class="text-decoration-none text-primary fw-medium">
+                                                        {{ conversation.job.title }}
+                                                    </a>
+                                                    <span class="text-muted ms-2">at {{ conversation.job.company }}</span>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            {% if conversation.get_latest_message %}
+                                                <div class="last-message">
+                                                    <p class="text-muted mb-0 text-truncate">
+                                                        <i class="fas fa-quote-left me-1"></i>
+                                                        {{ conversation.get_latest_message.content|truncatewords:15 }}
+                                                    </p>
+                                                </div>
+                                            {% else %}
+                                                <div class="last-message">
+                                                    <p class="text-muted mb-0 fst-italic">
+                                                        <i class="fas fa-comment-slash me-1"></i>
+                                                        No messages yet
+                                                    </p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Actions Section -->
+                                        <div class="conversation-actions ms-3">
+                                            <div class="btn-group-vertical" role="group">
+                                                <a href="{% url 'messaging.conversation_detail' conversation.id %}" 
+                                                   class="btn btn-primary btn-sm rounded-pill px-3">
+                                                    <i class="fas fa-comments me-1"></i>Open
+                                                </a>
+                                                <a href="{% url 'messaging.close_conversation' conversation.id %}" 
+                                                   class="btn btn-outline-danger btn-sm rounded-pill px-3 mt-1"
+                                                   onclick="event.stopPropagation(); return confirm('Are you sure you want to close this conversation?')">
+                                                    <i class="fas fa-times me-1"></i>Close
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    {% else %}
-        <div class="text-center mt-5">
-            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-            <h4>No conversations yet</h4>
-            <p class="text-muted">
-                {% if template_data.user_type == 'recruiter' %}
-                    Start a conversation with candidates to discuss job opportunities.
-                {% else %}
-                    Recruiters will contact you here when they're interested in your profile.
-                {% endif %}
-            </p>
+    {% endif %}
+    
+    {% if template_data.closed_conversations %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light border-0 py-3">
+                        <h5 class="mb-0 fw-semibold text-dark">
+                            <i class="fas fa-archive text-secondary me-2"></i>
+                            Closed Conversations
+                        </h5>
+                        <small class="text-muted">These conversations have been closed and are no longer active</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="conversation-list">
+                            {% for conversation in template_data.closed_conversations %}
+                                <div class="conversation-item closed-conversation">
+                                    <div class="d-flex align-items-center p-4 border-bottom">
+                                        <!-- Avatar Section -->
+                                        <div class="conversation-avatar me-3">
+                                            <div class="avatar-circle closed-avatar">
+                                                {% if template_data.user_type == 'recruiter' %}
+                                                    <i class="fas fa-user"></i>
+                                                {% else %}
+                                                    <i class="fas fa-user-tie"></i>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Content Section -->
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <h6 class="mb-1 fw-semibold text-muted">
+                                                        {{ conversation.other_participant.get_full_name|default:conversation.other_participant.username }}
+                                                    </h6>
+                                                    <span class="badge bg-secondary text-white border">
+                                                        {% if template_data.user_type == 'recruiter' %}
+                                                            <i class="fas fa-user me-1"></i>Job Seeker
+                                                        {% else %}
+                                                            <i class="fas fa-user-tie me-1"></i>Recruiter
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge bg-secondary rounded-pill">
+                                                        <i class="fas fa-archive me-1"></i>Closed
+                                                    </span>
+                                                    <small class="text-muted d-block mt-1">
+                                                        {{ conversation.updated_at|timesince }} ago
+                                                    </small>
+                                                </div>
+                                            </div>
+
+                                            <h6 class="mb-2 text-muted fw-medium">{{ conversation.subject }}</h6>
+
+                                            {% if conversation.job %}
+                                                <div class="job-context mb-2">
+                                                    <i class="fas fa-briefcase text-secondary me-2"></i>
+                                                    <span class="text-muted fw-medium">{{ conversation.job.title }}</span>
+                                                    <span class="text-muted ms-2">at {{ conversation.job.company }}</span>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if conversation.get_latest_message %}
+                                                <div class="last-message">
+                                                    <p class="text-muted mb-0 text-truncate">
+                                                        <i class="fas fa-quote-left me-1"></i>
+                                                        {{ conversation.get_latest_message.content|truncatewords:15 }}
+                                                    </p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Actions Section -->
+                                        <div class="conversation-actions ms-3">
+                                            <div class="btn-group-vertical" role="group">
+                                                <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" disabled>
+                                                    <i class="fas fa-lock me-1"></i>Closed
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if not template_data.conversations and not template_data.closed_conversations %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center py-5">
+                        <div class="empty-state">
+                            <div class="empty-icon mb-4">
+                                <i class="fas fa-comments fa-4x text-muted opacity-50"></i>
+                            </div>
+                            <h4 class="fw-semibold text-dark mb-3">No conversations yet</h4>
+                            <p class="text-muted mb-4 fs-5">
+                                {% if template_data.user_type == 'recruiter' %}
+                                    Start connecting with candidates by viewing job applications and sending messages.
+                                {% else %}
+                                    Recruiters will contact you here when they're interested in your profile.
+                                {% endif %}
+                            </p>
+                            {% if template_data.user_type == 'recruiter' %}
+                                <a href="{% url 'job_postings.index' %}" class="btn btn-primary btn-lg rounded-pill px-4">
+                                    <i class="fas fa-briefcase me-2"></i>Browse Jobs
+                                </a>
+                            {% else %}
+                                <a href="{% url 'user_profiles.profile' %}" class="btn btn-primary btn-lg rounded-pill px-4">
+                                    <i class="fas fa-user me-2"></i>Complete Profile
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     {% endif %}
 </div>
+
+<style>
+/* Custom styling for messaging interface */
+.conversation-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+}
+
+.conversation-item.closed-conversation {
+    cursor: default;
+    opacity: 0.7;
+    background-color: #f8f9fa;
+}
+
+.conversation-item.closed-conversation:hover {
+    background-color: #f8f9fa;
+    transform: none;
+    border-left-color: transparent;
+}
+
+.conversation-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: #007bff;
+    transform: translateX(2px);
+}
+
+.conversation-item.unread {
+    background-color: #fff3cd;
+    border-left-color: #ffc107;
+}
+
+.conversation-item.unread:hover {
+    background-color: #ffeaa7;
+}
+
+.conversation-avatar {
+    position: relative;
+}
+
+.avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.recruiter-avatar {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.jobseeker-avatar {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.closed-avatar {
+    background: linear-gradient(135deg, #6c757d, #495057);
+}
+
+.unread-indicator {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 12px;
+    height: 12px;
+    background-color: #dc3545;
+    border-radius: 50%;
+    border: 2px solid white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.conversation-actions .btn {
+    transition: all 0.2s ease;
+}
+
+.conversation-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.job-context {
+    background-color: #f8f9fa;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border-left: 3px solid #007bff;
+}
+
+.last-message {
+    background-color: #ffffff;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+    margin-top: 0.5rem;
+}
+
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-icon {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .conversation-item .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .conversation-actions {
+        margin-top: 1rem;
+        margin-left: 0 !important;
+        width: 100%;
+    }
+    
+    .conversation-actions .btn-group-vertical {
+        width: 100%;
+    }
+    
+    .conversation-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Smooth animations */
+.card {
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.badge {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
 
 <script>
 // Update unread count badge

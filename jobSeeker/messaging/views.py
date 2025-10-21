@@ -1,12 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.db.models import Q, Count
 from django.utils import timezone
 from .models import Conversation, Message, MessageNotification
 from .forms import StartConversationForm, MessageForm
-from job_postings.models import JobApplication
+from job_postings.models import JobApplication, Job
 from user_accounts.models import UserProfile
 
 @login_required
@@ -16,21 +17,33 @@ def inbox(request):
     """
     user_profile = get_object_or_404(UserProfile, user=request.user)
     
-    # Get all conversations where user is either recruiter or job seeker
-    conversations = Conversation.objects.filter(
+    # Get all active conversations where user is either recruiter or job seeker
+    active_conversations = Conversation.objects.filter(
         Q(recruiter=request.user) | Q(job_seeker=request.user),
         is_active=True
     ).select_related('recruiter', 'job_seeker', 'job').prefetch_related('messages')
+
+    # Get closed conversations for reference
+    closed_conversations = Conversation.objects.filter(
+        Q(recruiter=request.user) | Q(job_seeker=request.user),
+        is_active=False
+    ).select_related('recruiter', 'job_seeker', 'job').prefetch_related('messages')
     
-    # Add unread count for each conversation
-    for conversation in conversations:
+    # Add unread count and other participant for active conversations
+    for conversation in active_conversations:
         conversation.unread_count = Message.objects.filter(
             conversation=conversation,
             sender__isnull=False
         ).exclude(sender=request.user).filter(is_read=False).count()
+        conversation.other_participant = conversation.get_other_participant(request.user)
+    
+    # Add other participant for closed conversations
+    for conversation in closed_conversations:
+        conversation.other_participant = conversation.get_other_participant(request.user)
     
     template_data = {
-        'conversations': conversations,
+        'conversations': active_conversations,
+        'closed_conversations': closed_conversations,
         'user_type': user_profile.user_type,
     }
     
@@ -41,11 +54,21 @@ def conversation_detail(request, conversation_id):
     """
     Display a specific conversation and allow sending messages
     """
-    conversation = get_object_or_404(Conversation, id=conversation_id, is_active=True)
-    
-    # Check if user is part of this conversation
-    if request.user not in [conversation.recruiter, conversation.job_seeker]:
-        messages.error(request, 'You do not have permission to view this conversation.')
+    try:
+        conversation = Conversation.objects.get(id=conversation_id)
+        
+        # Check if conversation is active
+        if not conversation.is_active:
+            messages.warning(request, 'This conversation has been closed and is no longer accessible.')
+            return redirect('messaging.inbox')
+        
+        # Check if user is part of this conversation
+        if request.user not in [conversation.recruiter, conversation.job_seeker]:
+            messages.error(request, 'You do not have permission to view this conversation.')
+            return redirect('messaging.inbox')
+            
+    except Conversation.DoesNotExist:
+        messages.error(request, 'The requested conversation does not exist.')
         return redirect('messaging.inbox')
     
     # Mark all messages in this conversation as read for the current user
@@ -138,14 +161,23 @@ def start_conversation(request, user_id, job_id=None):
     if request.method == 'POST':
         form = StartConversationForm(request.POST)
         if form.is_valid():
-            conversation = form.save(commit=False)
-            conversation.recruiter = request.user
-            conversation.job_seeker = job_seeker
-            conversation.job = job
-            conversation.application = application
-            conversation.save()
+            # Use get_or_create to safely handle duplicate conversations
+            conversation, created = Conversation.objects.get_or_create(
+                recruiter=request.user,
+                job_seeker=job_seeker,
+                job=job,
+                defaults={
+                    'subject': form.cleaned_data['subject'],
+                    'application': application,
+                    'is_active': True
+                }
+            )
             
-            messages.success(request, f'Conversation started with {job_seeker.get_full_name() or job_seeker.username}!')
+            if created:
+                messages.success(request, f'Conversation started with {job_seeker.get_full_name() or job_seeker.username}!')
+            else:
+                messages.info(request, 'You already have an active conversation with this candidate.')
+            
             return redirect('messaging.conversation_detail', conversation_id=conversation.id)
     else:
         form = StartConversationForm()
@@ -230,6 +262,7 @@ def close_conversation(request, conversation_id):
     
     template_data = {
         'conversation': conversation,
+        'other_participant': conversation.get_other_participant(request.user),
     }
     
     return render(request, 'messaging/close_conversation.html', {'template_data': template_data})

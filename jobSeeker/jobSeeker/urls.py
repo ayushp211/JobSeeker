@@ -26,6 +26,7 @@ urlpatterns = [
     path('jobs/', include('job_postings.urls')),
     path('accounts/', include('user_accounts.urls')),
     path('profiles/', include('user_profiles.urls')),
+    path('messages/', include('messaging.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

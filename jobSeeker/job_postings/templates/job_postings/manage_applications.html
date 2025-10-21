@@ -60,9 +60,14 @@
                                     <div class="d-flex align-items-start">
                                         <div class="flex-grow-1">
                                             <h6 class="fw-bold mb-1">{{ application.applicant.get_full_name|default:application.applicant.username }}</h6>
-                                            <a href="{% url 'view_applicant_profile' job_id=job.id user_id=application.applicant.id %}" class="btn btn-outline-info btn-sm mb-2">
-                                                <i class="fas fa-user me-1"></i> View Profile
-                                            </a>
+                                            <div class="d-flex gap-2 mb-2">
+                                                <a href="{% url 'view_applicant_profile' job_id=job.id user_id=application.applicant.id %}" class="btn btn-outline-info btn-sm">
+                                                    <i class="fas fa-user me-1"></i> View Profile
+                                                </a>
+                                                <a href="{% url 'messaging.start_conversation_with_job' user_id=application.applicant.id job_id=job.id %}" class="btn btn-outline-success btn-sm">
+                                                    <i class="fas fa-envelope me-1"></i> Message
+                                                </a>
+                                            </div>
                                             <p class="text-muted mb-2">
                                                 <i class="fas fa-envelope me-1"></i> {{ application.applicant.email|default:"No email provided" }}
                                             </p>
