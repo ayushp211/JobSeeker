@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
 from job_postings.models import JobApplication, ApplicationStatus
-from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm
+from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm
 
 @login_required
 def profile(request):
@@ -35,6 +35,8 @@ def profile(request):
         # Get all available statuses for the filter dropdown
         all_statuses = ApplicationStatus.objects.all().order_by('order')
 
+        privacy_form = ProfilePrivacyForm(instance=job_seeker_profile)
+
         template_data = {
             'profile': job_seeker_profile,
             'experiences': work_experience,
@@ -44,6 +46,7 @@ def profile(request):
             'applications': applications,
             'status_filter': status_filter,
             'all_statuses': all_statuses,
+            'privacy_form': privacy_form,
         }
 
         return render(request, 'user_profiles/profile.html', {'template_data': template_data})
@@ -166,3 +169,14 @@ def delete_link(request, link_id):
         link.delete()
     return redirect('user_profiles.profile')
 
+@login_required
+def manage_privacy(request):
+    profile = get_object_or_404(JobSeekerProfile, user=request.user)
+    if request.method == 'POST':
+        form = ProfilePrivacyForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your privacy settings have been updated successfully.')
+        else:
+            messages.error(request, 'There was an error updating your settings.')
+    return redirect('user_profiles.profile')

@@ -11,4 +11,5 @@ urlpatterns = [
     path('profile/delete-education/<int:education_id>/', views.delete_education, name='user_profiles.delete_education'),
     path('profile/add-link/', views.add_link, name='user_profiles.add_link'),
     path('profile/delete-link/<int:link_id>/', views.delete_link, name='user_profiles.delete_link'),
+    path('profile/manage-privacy/', views.manage_privacy, name='user_profiles.manage_privacy'),
 ] 

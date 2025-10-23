@@ -16,6 +16,8 @@
 
     <div class="row">
         <div class="col-lg-8">
+            
+            {% if profile.is_headline_public %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-start mb-4">
@@ -27,11 +29,13 @@
                     <hr>
                     <div>
                         <h4 class="card-title fw-bold mb-3"><i class="fas fa-id-card me-2 text-primary"></i>About Me</h4>
-                        <p class="fs-5">{{ profile.headline|linebreaksbr|default:"No bio has been added." }}</p>
+                        <p class="fs-5">{{ profile.headline|linebreaksbr|default:"This section is private or no bio has been added." }}</p>
                     </div>
                 </div>
             </div>
+            {% endif %}
 
+            {% if profile.is_experience_public %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3"><i class="fas fa-briefcase me-2 text-primary"></i>Work Experience</h4>
@@ -43,11 +47,13 @@
                         </div>
                         {% if not forloop.last %}<hr class="my-3">{% endif %}
                     {% empty %}
-                        <p class="text-muted fst-italic">No work experience has been added.</p>
+                        <p class="text-muted fst-italic">This section is private or no work experience has been added.</p>
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
 
+            {% if profile.is_education_public %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3"><i class="fas fa-graduation-cap me-2 text-primary"></i>Education</h4>
@@ -59,24 +65,28 @@
                         </div>
                         {% if not forloop.last %}<hr class="my-3">{% endif %}
                     {% empty %}
-                        <p class="text-muted fst-italic">No education history has been added.</p>
+                        <p class="text-muted fst-italic">This section is private or no education history has been added.</p>
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <div class="col-lg-4">
+            {% if profile.is_skills_public %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3"><i class="fas fa-cogs me-2 text-primary"></i>Skills</h4>
                     {% for skill in profile.skills.all %}
                         <span class="badge bg-secondary me-1 mb-1 fs-6">{{ skill.name }}</span>
                     {% empty %}
-                        <p class="text-muted fst-italic">No skills have been added.</p>
+                        <p class="text-muted fst-italic">This section is private or no skills have been added.</p>
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
 
+            {% if profile.is_links_public %}
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <h4 class="card-title fw-bold mb-3"><i class="fas fa-link me-2 text-primary"></i>Links</h4>
@@ -86,11 +96,12 @@
                                 <a href="{{ link.url }}" target="_blank" class="text-decoration-none">{{ link.name }} <i class="fas fa-external-link-alt fa-xs"></i></a>
                             </li>
                         {% empty %}
-                            <p class="text-muted fst-italic">No links have been added.</p>
+                            <p class="text-muted fst-italic">This section is private or no links have been added.</p>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -14,6 +14,12 @@ class JobSeekerProfile(models.Model):
     email = models.EmailField(max_length=254, blank=True, null=True)
     headline = models.CharField(max_length=255, blank=True, null=True)
     skills = models.ManyToManyField(Skill, blank=True)
+
+    is_headline_public = models.BooleanField(default=True, verbose_name="Make 'About Me' Public")
+    is_experience_public = models.BooleanField(default=True, verbose_name="Make Work Experience Public")
+    is_education_public = models.BooleanField(default=True, verbose_name="Make Education Public")
+    is_skills_public = models.BooleanField(default=True, verbose_name="Make Skills Public")
+    is_links_public = models.BooleanField(default=True, verbose_name="Make Links Public")
     
     def __str__(self):
         return f"Job Seeker Profile for {self.user.username}"

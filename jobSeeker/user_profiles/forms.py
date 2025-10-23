@@ -50,3 +50,21 @@ class LinkForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'url': forms.URLInput(attrs={'class': 'form-control'}),
         }
+
+class ProfilePrivacyForm(forms.ModelForm):
+    class Meta:
+        model = JobSeekerProfile
+        fields = [
+            'is_headline_public', 
+            'is_experience_public', 
+            'is_education_public', 
+            'is_skills_public', 
+            'is_links_public'
+        ]
+        widgets = {
+            'is_headline_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_experience_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_education_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_skills_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_links_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

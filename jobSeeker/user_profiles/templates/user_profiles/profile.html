@@ -50,7 +50,7 @@
 
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
-                     <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title fw-bold mb-0"><i class="fas fa-graduation-cap me-2 text-primary"></i>Education</h4>
                         <a href="{% url 'user_profiles.add_education' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-plus me-1"></i> Add</a>
                     </div>
@@ -69,6 +69,67 @@
                         {% if not forloop.last %}<hr>{% endif %}
                     {% empty %}
                         <p class="text-muted fst-italic">No education history has been added yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title fw-bold mb-0"><i class="fas fa-paper-plane me-2 text-primary"></i>My Applications</h4>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Filter by Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item {% if not template_data.status_filter %}active{% endif %}" href="?">All Applications</a></li>
+                                {% for status in template_data.all_statuses %}
+                                    <li><a class="dropdown-item {% if template_data.status_filter == status.id|stringformat:'s' %}active{% endif %}" href="?status={{ status.id }}">{{ status.name }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    {% for application in template_data.applications %}
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-1">{{ application.job.title }}</h6>
+                                            <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
+                                        </div>
+                                        <div class="text-end">
+                                            {% if application.status %}
+                                                <span class="badge mb-2" style="background-color: {{ application.status.color }}; color: white;">{{ application.status.name }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary mb-2">No Status</span>
+                                            {% endif %}
+                                            <br>
+                                            <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i> Status managed by recruiter
+                                            </small>
+                                        </div>
+                                        <a href="{% url 'job_postings.show' application.job.id %}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-eye me-1"></i> View Job
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted fst-italic">You haven't applied to any jobs yet.</p>
+                            <a href="{% url 'job_postings.index' %}" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Browse Jobs
+                            </a>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
@@ -110,102 +171,24 @@
                     </ul>
                 </div>
             </div>
-
-            <div class="card shadow-sm">
+            
+            <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="card-title fw-bold mb-0"><i class="fas fa-paper-plane me-2 text-primary"></i>My Applications</h4>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-1"></i> Filter by Status
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item {% if not template_data.status_filter %}active{% endif %}" href="?">All Applications</a></li>
-                                {% for status in template_data.all_statuses %}
-                                    <li><a class="dropdown-item {% if template_data.status_filter == status.id|stringformat:'s' %}active{% endif %}" href="?status={{ status.id }}">{{ status.name }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    {% if template_data.status_filter %}
-                        <div class="alert alert-info mb-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Showing applications with status: <strong>{{ template_data.status_filter|title }}</strong>
-                            <a href="?" class="btn btn-sm btn-outline-primary ms-2">Clear Filter</a>
-                        </div>
-                    {% endif %}
-                    
-                    {% for application in template_data.applications %}
-                        <div class="border rounded p-3 mb-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
-                                            <h6 class="fw-bold mb-1">{{ application.job.title }}</h6>
-                                            <p class="text-muted mb-2">{{ application.job.company }} • {{ application.job.location }}</p>
-                                        </div>
-                                        <div class="text-end">
-                                            {% if application.status %}
-                                                <span class="badge mb-2" style="background-color: {{ application.status.color }}; color: white;">{{ application.status.name }}</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary mb-2">No Status</span>
-                                            {% endif %}
-                                            <br>
-                                            <small class="text-muted">Applied {{ application.applied_at|timesince }} ago</small>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Action Buttons -->
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                Status managed by recruiter
-                                            </small>
-                                        </div>
-                                        <a href="{% url 'job_postings.show' application.job.id %}" class="btn btn-outline-secondary btn-sm">
-                                            <i class="fas fa-eye me-1"></i> View Job
-                                        </a>
-                                    </div>
-                                </div>
+                    <h4 class="card-title fw-bold mb-3"><i class="fas fa-user-shield me-2 text-primary"></i>Privacy Settings</h4>
+                    <p class="text-muted small">Control what recruiters see on your profile.</p>
+                    <form action="{% url 'user_profiles.manage_privacy' %}" method="post">
+                        {% csrf_token %}
+                        {% for field in template_data.privacy_form %}
+                            <div class="form-check form-switch mb-2">
+                                {{ field }}
+                                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                             </div>
-                            
-                            {% if application.cover_note %}
-                                <div class="mt-3 pt-3 border-top">
-                                    <small class="text-muted">Your note:</small>
-                                    <p class="small mb-0">{{ application.cover_note|linebreaksbr|truncatewords:30 }}</p>
-                                </div>
-                            {% endif %}
-                            
-                            {% if application.status_updated_at != application.applied_at %}
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Status last updated {{ application.status_updated_at|timesince }} ago
-                                    </small>
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% empty %}
-                        <div class="text-center py-4">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                            <p class="text-muted fst-italic">
-                                {% if template_data.status_filter %}
-                                    No applications found with status "{{ template_data.status_filter|title }}".
-                                {% else %}
-                                    You haven't applied to any jobs yet.
-                                {% endif %}
-                            </p>
-                            <a href="{% url 'job_postings.index' %}" class="btn btn-primary">
-                                <i class="fas fa-search me-1"></i> Browse Jobs
-                            </a>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Save Settings</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock content %}
-
