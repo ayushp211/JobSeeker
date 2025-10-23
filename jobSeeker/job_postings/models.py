@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
 from user_profiles.models import Skill
+import urllib.request
+import urllib.parse
+import json
 
 # Create your models here.
 
@@ -44,7 +47,9 @@ class Job(models.Model):
     
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
-    location = models.CharField(max_length=200)
+    location = models.CharField(max_length=500, help_text="Job location (will be used for map pinning)")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Latitude for map pin (auto-generated from location)")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Longitude for map pin (auto-generated from location)")
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, default='full_time')
     experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVEL_CHOICES, default='entry')
     work_location = models.CharField(max_length=20, choices=WORK_LOCATION_CHOICES, default='on_site')
@@ -67,6 +72,34 @@ class Job(models.Model):
     
     def get_absolute_url(self):
         return reverse('job_postings.show', kwargs={'id': self.pk})
+    
+    def geocode_location(self):
+        """Geocode the location field to get latitude and longitude coordinates"""
+        if not self.location:
+            return False
+        
+        try:
+            # Use OpenStreetMap Nominatim API for geocoding
+            encoded_location = urllib.parse.quote(self.location)
+            url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_location}&limit=1"
+            
+            with urllib.request.urlopen(url, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode())
+                    if data and len(data) > 0:
+                        self.latitude = float(data[0]['lat'])
+                        self.longitude = float(data[0]['lon'])
+                        return True
+        except Exception as e:
+            print(f"Geocoding error: {e}")
+        
+        return False
+    
+    def save(self, *args, **kwargs):
+        # Auto-geocode location if it's provided but coordinates aren't
+        if self.location and (not self.latitude or not self.longitude):
+            self.geocode_location()
+        super().save(*args, **kwargs)
 
 class JobApplication(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')

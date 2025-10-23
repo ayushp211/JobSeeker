@@ -52,6 +52,15 @@
                         </div>
                     </div>
                     
+                    <!-- Map Display -->
+                    {% if job.latitude and job.longitude %}
+                        <div class="mb-4">
+                            <h6><i class="fas fa-map text-primary"></i> Job Location</h6>
+                            <div id="job-map" style="height: 300px; border-radius: 8px; border: 1px solid #ddd;"></div>
+                            <small class="text-muted">Exact location of the job</small>
+                        </div>
+                    {% endif %}
+                    
                     <!-- Skills Required -->
                     {% if job.skills_required.all %}
                         <div class="mb-4">
@@ -171,5 +180,40 @@
         </div>
     </div>
 </div>
+{% endif %}
+
+<!-- Map JavaScript -->
+{% if job.latitude and job.longitude %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map for job location display
+    const lat = {{ job.latitude }};
+    const lng = {{ job.longitude }};
+    
+    const map = L.map('job-map').setView([lat, lng], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Add marker for job location
+    const marker = L.marker([lat, lng]).addTo(map);
+    
+    // Add popup with job information
+    marker.bindPopup(`
+        <div>
+            <h6><strong>{{ job.title }}</strong></h6>
+            <p class="mb-1"><strong>{{ job.company }}</strong></p>
+            <p class="mb-0 text-muted">{{ job.location }}</p>
+        </div>
+    `);
+});
+</script>
 {% endif %}
 {% endblock %}

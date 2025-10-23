@@ -48,6 +48,20 @@
                             {% endif %}
                         </div>
                         
+                        <!-- Map Section -->
+                        <div class="mb-4">
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="geocode-btn">
+                                    <i class="fas fa-map-marker-alt"></i> Pin on Map
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="clear-location-btn">
+                                    <i class="fas fa-times"></i> Clear Map
+                                </button>
+                            </div>
+                            <div id="map" style="height: 300px; border-radius: 8px; border: 1px solid #ddd;"></div>
+                            <small class="text-muted">Click "Pin on Map" to show the exact location of the job on the map.</small>
+                        </div>
+                        
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <label for="{{ form.job_type.id_for_label }}" class="form-label">Job Type</label>
@@ -217,4 +231,95 @@
     font-size: 14px;
 }
 </style>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let map;
+    let marker;
+    
+    // Initialize map
+    function initMap() {
+        map = L.map('map').setView([39.8283, -98.5795], 4); // Center of USA
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    }
+    
+    // Geocode function
+    function geocodeLocation() {
+        const location = document.getElementById('id_location').value;
+        if (!location.trim()) {
+            alert('Please enter a location first.');
+            return;
+        }
+        
+        // Show loading state
+        const btn = document.getElementById('geocode-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finding...';
+        btn.disabled = true;
+        
+        // Simple geocoding using OpenStreetMap Nominatim
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+                    
+                    // Update map
+                    map.setView([lat, lng], 13);
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+                    marker = L.marker([lat, lng]).addTo(map);
+                    
+                    // Add popup with location
+                    marker.bindPopup(`
+                        <div>
+                            <strong>Job Location</strong><br>
+                            <small>${location}</small>
+                        </div>
+                    `).openPopup();
+                    
+                    alert('Location pinned successfully!');
+                } else {
+                    alert('Location not found. Please try a different location.');
+                }
+            })
+            .catch(error => {
+                console.error('Geocoding error:', error);
+                alert('Error finding location. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+    }
+    
+    // Clear map
+    function clearMap() {
+        if (marker) {
+            map.removeLayer(marker);
+            marker = null;
+        }
+        map.setView([39.8283, -98.5795], 4); // Reset to center of USA
+    }
+    
+    // Event listeners
+    document.getElementById('geocode-btn').addEventListener('click', geocodeLocation);
+    document.getElementById('clear-location-btn').addEventListener('click', clearMap);
+    
+    // Initialize map
+    initMap();
+});
+</script>
 {% endblock %}

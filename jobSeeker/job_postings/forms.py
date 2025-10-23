@@ -20,7 +20,8 @@ class JobForm(forms.ModelForm):
             }),
             'location': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter job location'
+                'placeholder': 'Enter job location (e.g., 123 Main St, San Francisco, CA)',
+                'id': 'id_location'
             }),
             'job_type': forms.Select(attrs={
                 'class': 'form-control'
