@@ -409,3 +409,56 @@ def view_applicant_profile(request, job_id, user_id): # Updated function signatu
     }
     
     return render(request, 'job_postings/applicant_profile.html', context)
+
+@login_required
+def recommendations(request):
+    """
+    View for job seekers to see job recommendations based on their skills.
+    """
+    # Only job seekers can access recommendations
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'job_seeker':
+        messages.error(request, 'Only job seekers can view job recommendations.')
+        return redirect('job_postings.index')
+    
+    # Get the job seeker's profile and skills
+    try:
+        profile = JobSeekerProfile.objects.get(user=request.user)
+        user_skills = profile.skills.all()
+    except JobSeekerProfile.DoesNotExist:
+        messages.error(request, 'Please complete your profile to get job recommendations.')
+        return redirect('user_profiles.profile')
+    
+    if not user_skills.exists():
+        messages.info(request, 'Add skills to your profile to get personalized job recommendations.')
+        return redirect('user_profiles.profile')
+    
+    # Get jobs that require skills matching the user's skills
+    recommended_jobs = Job.objects.filter(
+        is_active=True,
+        skills_required__in=user_skills
+    ).distinct()
+    
+    # Exclude jobs the user has already applied to
+    applied_job_ids = JobApplication.objects.filter(
+        applicant=request.user
+    ).values_list('job_id', flat=True)
+    recommended_jobs = recommended_jobs.exclude(id__in=applied_job_ids)
+    
+    # Order by number of matching skills (descending) and then by creation date
+    jobs_with_match_count = []
+    for job in recommended_jobs:
+        matching_skills = job.skills_required.filter(id__in=user_skills.values_list('id', flat=True))
+        match_count = matching_skills.count()
+        jobs_with_match_count.append({
+            'job': job,
+            'match_count': match_count,
+            'matching_skills': matching_skills
+        })
+    
+    # Sort by match count (descending) and then by creation date
+    jobs_with_match_count.sort(key=lambda x: (-x['match_count'], -x['job'].created_at.timestamp()))
+    
+    return render(request, 'job_postings/recommendations.html', {
+        'recommended_jobs': jobs_with_match_count,
+        'user_skills': user_skills
+    })

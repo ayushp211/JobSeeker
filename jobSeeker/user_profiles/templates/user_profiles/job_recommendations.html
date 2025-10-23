@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="display-5 fw-bold mb-0"><i class="fas fa-lightbulb me-2 text-primary"></i>Job Recommendations</h1>
+                        <a href="{% url 'user_profiles.profile' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Profile
+                        </a>
+                    </div>
+                    
+                    {% if has_skills %}
+                        <p class="text-muted mb-4">
+                            Based on your skills: 
+                            {% for skill in user_skills %}
+                                <span class="badge bg-primary me-1">{{ skill.name }}</span>
+                            {% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if has_skills %}
+                {% if recommended_jobs %}
+                    <div class="row">
+                        {% for job in recommended_jobs %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card job-card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ job.title }}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">{{ job.company }}</h6>
+                                        <p class="card-text">
+                                            <i class="fas fa-map-marker-alt"></i> {{ job.location }}<br>
+                                            <i class="fas fa-briefcase"></i> {{ job.get_job_type_display }}<br>
+                                            <i class="fas fa-level-up-alt"></i> {{ job.get_experience_level_display }}<br>
+                                            <i class="fas fa-laptop-house"></i> {{ job.get_work_location_display }}
+                                            {% if job.salary_min and job.salary_max %}
+                                                <br><i class="fas fa-dollar-sign"></i> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+                                            {% endif %}
+                                            {% if job.visa_sponsorship %}
+                                                <br><i class="fas fa-passport"></i> Visa Sponsorship Available
+                                            {% endif %}
+                                        </p>
+                                        <p class="card-text">{{ job.description|truncatewords:20 }}</p>
+                                        
+                                        <!-- Show matching skills -->
+                                        <div class="mb-2">
+                                            <small class="text-muted">Matching skills:</small><br>
+                                            {% for skill in job.skills_required.all %}
+                                                {% if skill in user_skills %}
+                                                    <span class="badge bg-success me-1">{{ skill.name }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary me-1">{{ skill.name }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <small class="text-muted">Posted {{ job.created_at|timesince }} ago</small>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <a href="{% url 'job_postings.show' job.id %}" class="btn btn-primary btn-sm w-100">
+                                            <i class="fas fa-eye me-1"></i> View & Apply
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card shadow-sm">
+                        <div class="card-body text-center p-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No job recommendations found</h4>
+                            <p class="text-muted">We couldn't find any jobs that match your current skills. Try adding more skills to your profile or check out all available jobs.</p>
+                            <div class="mt-4">
+                                <a href="{% url 'user_profiles.manage_skills' %}" class="btn btn-outline-primary me-2">
+                                    <i class="fas fa-plus me-1"></i> Add More Skills
+                                </a>
+                                <a href="{% url 'job_postings.index' %}" class="btn btn-primary">
+                                    <i class="fas fa-briefcase me-1"></i> Browse All Jobs
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body text-center p-5">
+                        <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Add Skills to Get Recommendations</h4>
+                        <p class="text-muted">We need to know your skills to recommend relevant job opportunities. Add your skills to start receiving personalized recommendations!</p>
+                        <div class="mt-4">
+                            <a href="{% url 'user_profiles.manage_skills' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> Add Skills
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="card-title fw-bold mb-3"><i class="fas fa-info-circle me-2 text-primary"></i>How Recommendations Work</h5>
+                    <p class="text-muted">
+                        Our recommendation system matches jobs to your skills profile. Jobs are ranked by:
+                    </p>
+                    <ul class="text-muted small">
+                        <li>Number of matching skills</li>
+                        <li>Most recent postings</li>
+                        <li>Excludes jobs you've already applied to</li>
+                    </ul>
+                    <hr>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'user_profiles.manage_skills' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-edit me-1"></i> Update Skills
+                        </a>
+                        <a href="{% url 'job_postings.search' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-search me-1"></i> Search All Jobs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

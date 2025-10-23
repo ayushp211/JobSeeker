@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-star text-warning"></i> Job Recommendations</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'job_postings.index' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> All Jobs
+            </a>
+            <a href="{% url 'job_postings.search' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-search"></i> Search Jobs
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Personalized Recommendations:</strong> These jobs match your skills: 
+                {% for skill in user_skills %}
+                    <span class="badge bg-primary me-1">{{ skill.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    {% if recommended_jobs %}
+        <div class="row">
+            {% for job_data in recommended_jobs %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card job-card h-100 border-warning">
+                        <div class="card-header bg-warning bg-opacity-10">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-star"></i> {{ job_data.match_count }} skill{{ job_data.match_count|pluralize }} match{{ job_data.match_count|pluralize:"es" }}
+                                </span>
+                                <small class="text-muted">Recommended</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ job_data.job.title }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ job_data.job.company }}</h6>
+                            <p class="card-text">
+                                <i class="fas fa-map-marker-alt"></i> {{ job_data.job.location }}<br>
+                                <i class="fas fa-briefcase"></i> {{ job_data.job.get_job_type_display }}<br>
+                                <i class="fas fa-level-up-alt"></i> {{ job_data.job.get_experience_level_display }}<br>
+                                <i class="fas fa-laptop-house"></i> {{ job_data.job.get_work_location_display }}
+                                {% if job_data.job.salary_min and job_data.job.salary_max %}
+                                    <br><i class="fas fa-dollar-sign"></i> ${{ job_data.job.salary_min|floatformat:0 }} - ${{ job_data.job.salary_max|floatformat:0 }}
+                                {% endif %}
+                                {% if job_data.job.visa_sponsorship %}
+                                    <br><i class="fas fa-passport"></i> Visa Sponsorship Available
+                                {% endif %}
+                            </p>
+                            <p class="card-text">{{ job_data.job.description|truncatewords:20 }}</p>
+                            
+                            <!-- Matching Skills -->
+                            <div class="mb-2">
+                                <small class="text-muted">Matching skills:</small><br>
+                                {% for skill in job_data.matching_skills %}
+                                    <span class="badge bg-success me-1">{{ skill.name }}</span>
+                                {% endfor %}
+                            </div>
+                            
+                            <small class="text-muted">Posted {{ job_data.job.created_at|timesince }} ago</small>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="{% url 'job_postings.show' job_data.job.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                <a href="{% url 'job_postings.show' job_data.job.id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-paper-plane"></i> Apply Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center mt-5">
+            <i class="fas fa-star fa-3x text-muted mb-3"></i>
+            <h4>No recommendations found</h4>
+            <p class="text-muted">We couldn't find any jobs matching your current skills.</p>
+            <div class="mt-3">
+                <a href="{% url 'user_profiles.profile' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-user-edit"></i> Update Your Skills
+                </a>
+                <a href="{% url 'job_postings.index' %}" class="btn btn-primary">
+                    <i class="fas fa-list"></i> Browse All Jobs
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.job-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.job-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+
+.bg-warning.bg-opacity-10 {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+</style>
+{% endblock %}
