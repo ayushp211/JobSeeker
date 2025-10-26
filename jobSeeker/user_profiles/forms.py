@@ -68,3 +68,23 @@ class ProfilePrivacyForm(forms.ModelForm):
             'is_skills_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'is_links_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+class CandidateSearchForm(forms.Form):
+    skills = forms.ModelMultipleChoiceField(
+        queryset=Skill.objects.all(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False,
+        help_text='Select skills to search for'
+    )
+    location = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Atlanta, GA'}),
+        help_text='Search by location'
+    )
+    project_keywords = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search by project keywords'}),
+        help_text='Search in work experience descriptions'
+    )

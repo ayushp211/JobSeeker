@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-search"></i> Search Candidates</h2>
+    </div>
+    
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'user_profiles.search_candidates' %}">
+                <div class="row">
+                    <!-- Skills Filter -->
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label"><strong>Skills</strong></label>
+                        <div class="border rounded p-3" style="max-height: 350px; overflow-y: auto; min-height: 150px;">
+                            {% for skill in form.skills %}
+                                <div class="form-check mb-2 p-2" style="background-color: #f8f9fa; border-radius: 4px;">
+                                    {{ skill }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <small class="form-text text-muted">{{ form.skills.help_text }}</small>
+                    </div>
+                    
+                    <!-- Location Filter -->
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label" for="{{ form.location.id_for_label }}"><strong>Location</strong></label>
+                        {{ form.location }}
+                        <small class="form-text text-muted">{{ form.location.help_text }}</small>
+                    </div>
+                    
+                    <!-- Project Keywords Filter -->
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label" for="{{ form.project_keywords.id_for_label }}"><strong>Project Keywords</strong></label>
+                        {{ form.project_keywords }}
+                        <small class="form-text text-muted">{{ form.project_keywords.help_text }}</small>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <a href="{% url 'user_profiles.search_candidates' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Search Results -->
+    {% if search_performed %}
+        <h4 class="mb-3">Search Results ({{ profiles_with_scores|length }} candidates found)</h4>
+        
+        {% if profiles_with_scores %}
+            <div class="row">
+                {% for item in profiles_with_scores %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <strong>{{ item.profile.user.get_full_name|default:item.profile.user.username }}</strong>
+                                {% if item.match_score > 0 %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-star"></i> {{ item.match_score }} match{{ item.match_score|pluralize:"es" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                {% if item.profile.headline %}
+                                    <p class="card-text"><em>{{ item.profile.headline }}</em></p>
+                                {% endif %}
+                                
+                                {% if item.profile.email %}
+                                    <p class="card-text mb-2">
+                                        <i class="fas fa-envelope"></i> {{ item.profile.email }}
+                                    </p>
+                                {% endif %}
+                                
+                                {% if item.profile.skills.exists %}
+                                    <p class="card-text mb-2">
+                                        <strong>Skills:</strong><br>
+                                        {% for skill in item.profile.skills.all %}
+                                            <span class="badge bg-primary me-1">{{ skill.name }}</span>
+                                        {% endfor %}
+                                    </p>
+                                {% endif %}
+                                
+                                {% if item.profile.experience.exists %}
+                                    <p class="card-text mb-2">
+                                        <strong>Experience:</strong><br>
+                                        {% for exp in item.profile.experience.all|slice:":2" %}
+                                            <small>
+                                                <strong>{{ exp.title }}</strong> at {{ exp.company }}
+                                                {% if exp.location %}
+                                                    <i class="fas fa-map-marker-alt"></i> {{ exp.location }}
+                                                {% endif %}
+                                            </small><br>
+                                        {% endfor %}
+                                    </p>
+                                {% endif %}
+                                
+                                {% if item.matched_criteria %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        {% for criteria in item.matched_criteria %}
+                                            {{ criteria }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{% url 'user_profiles.view_public_profile' item.profile.user.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-user-circle"></i> View Full Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                <h5>No candidates found</h5>
+                <p>Try adjusting your search criteria or clearing the filters.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-search fa-3x mb-3"></i>
+            <h5>Start Searching for Candidates</h5>
+            <p>Use the search form above to find candidates by skills, location, and project keywords.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.form-check {
+    margin-bottom: 0.5rem;
+}
+
+.form-check-label {
+    margin-left: 0.5rem;
+    cursor: pointer;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Skills selection styling */
+.form-check input[type="checkbox"] {
+    cursor: pointer;
+    transform: scale(1.2);
+    margin-right: 0.5rem;
+}
+
+.form-check:hover {
+    background-color: #e9ecef !important;
+}
+
+.form-check:has(input:checked) {
+    background-color: #d4edda !important;
+    border: 1px solid #28a745;
+}
+
+/* Better scrollbar for skills list */
+div[style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 10px;
+}
+
+div[style*="overflow-y: auto"]::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
+{% endblock %}

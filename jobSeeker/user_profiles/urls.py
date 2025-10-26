@@ -12,4 +12,6 @@ urlpatterns = [
     path('profile/add-link/', views.add_link, name='user_profiles.add_link'),
     path('profile/delete-link/<int:link_id>/', views.delete_link, name='user_profiles.delete_link'),
     path('profile/manage-privacy/', views.manage_privacy, name='user_profiles.manage_privacy'),
+    path('search-candidates/', views.search_candidates, name='user_profiles.search_candidates'),
+    path('view-profile/<int:user_id>/', views.view_public_profile, name='user_profiles.view_public_profile'),
 ] 

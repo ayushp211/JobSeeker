@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db.models import Q
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
 from job_postings.models import JobApplication, ApplicationStatus
-from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm
+from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm, CandidateSearchForm
 
 @login_required
 def profile(request):
@@ -180,3 +181,114 @@ def manage_privacy(request):
         else:
             messages.error(request, 'There was an error updating your settings.')
     return redirect('user_profiles.profile')
+
+@login_required
+def search_candidates(request):
+    """
+    View for recruiters to search for job seekers by skills, location, and projects.
+    """
+    # Only recruiters can search for candidates
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can search for candidates.')
+        return redirect('homepage.index')
+    
+    form = CandidateSearchForm(request.GET)
+    profiles = JobSeekerProfile.objects.all()
+    search_performed = False
+    
+    if form.is_valid():
+        # Get all job seeker profiles (respect privacy settings)
+        profiles = profiles.filter(user__userprofile__user_type='job_seeker')
+        search_performed = any(form.cleaned_data.values())
+        
+        # Filter by skills
+        skills = form.cleaned_data.get('skills')
+        if skills:
+            profiles = profiles.filter(skills__in=skills).distinct()
+        
+        # Filter by location (search in work experience location)
+        location = form.cleaned_data.get('location')
+        if location:
+            profiles = profiles.filter(
+                Q(email__icontains=location) |
+                Q(experience__location__icontains=location)
+            ).distinct()
+        
+        # Filter by project keywords (search in work experience descriptions)
+        project_keywords = form.cleaned_data.get('project_keywords')
+        if project_keywords:
+            profiles = profiles.filter(
+                Q(experience__description__icontains=project_keywords) |
+                Q(experience__title__icontains=project_keywords)
+            ).distinct()
+    
+    # Calculate match scores for each profile
+    profiles_with_scores = []
+    for profile in profiles:
+        match_score = 0
+        matched_criteria = []
+        
+        if form.is_valid():
+            skills = form.cleaned_data.get('skills')
+            location = form.cleaned_data.get('location')
+            project_keywords = form.cleaned_data.get('project_keywords')
+            
+            if skills:
+                matching_skills = profile.skills.filter(id__in=[s.id for s in skills])
+                if matching_skills.exists():
+                    match_score += matching_skills.count()
+                    matched_criteria.append(f"{matching_skills.count()} skill match(es)")
+            
+            if location:
+                # Check if location matches in email or work experience
+                if profile.email and location.lower() in profile.email.lower():
+                    match_score += 1
+                    matched_criteria.append("Location match")
+                if profile.experience.filter(location__icontains=location).exists():
+                    match_score += 1
+                    matched_criteria.append("Location match")
+            
+            if project_keywords:
+                if profile.experience.filter(
+                    Q(description__icontains=project_keywords) |
+                    Q(title__icontains=project_keywords)
+                ).exists():
+                    match_score += 1
+                    matched_criteria.append("Project match")
+        
+        profiles_with_scores.append({
+            'profile': profile,
+            'match_score': match_score,
+            'matched_criteria': matched_criteria
+        })
+    
+    # Sort by match score (descending)
+    profiles_with_scores.sort(key=lambda x: x['match_score'], reverse=True)
+    
+    return render(request, 'user_profiles/search_candidates.html', {
+        'form': form,
+        'profiles_with_scores': profiles_with_scores,
+        'search_performed': search_performed
+    })
+
+@login_required
+def view_public_profile(request, user_id):
+    """
+    Allows recruiters to view a job seeker's public profile.
+    """
+    # Only recruiters can view public profiles
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can view candidate profiles.')
+        return redirect('homepage.index')
+    
+    profile_user = get_object_or_404(UserProfile, user_id=user_id)
+    
+    if profile_user.user_type != 'job_seeker':
+        messages.error(request, 'This profile is not available.')
+        return redirect('user_profiles.search_candidates')
+    
+    job_seeker_profile = get_object_or_404(JobSeekerProfile, user_id=user_id)
+    
+    return render(request, 'user_profiles/public_profile.html', {
+        'profile': job_seeker_profile
+    })
