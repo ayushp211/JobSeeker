@@ -60,17 +60,19 @@
                                     <div class="d-flex align-items-start">
                                         <div class="flex-grow-1">
                                             <h6 class="fw-bold mb-1">{{ application.applicant.get_full_name|default:application.applicant.username }}</h6>
-                                            <div class="d-flex gap-2 mb-2">
-                                                <a href="{% url 'view_applicant_profile' job_id=job.id user_id=application.applicant.id %}" class="btn btn-outline-info btn-sm">
-                                                    <i class="fas fa-user me-1"></i> View Profile
-                                                </a>
-                                                <a href="{% url 'messaging.start_conversation_with_job' user_id=application.applicant.id job_id=job.id %}" class="btn btn-outline-success btn-sm">
-                                                    <i class="fas fa-envelope me-1"></i> Message
-                                                </a>
+                                            <a href="{% url 'view_applicant_profile' job_id=job.id user_id=application.applicant.id %}" class="btn btn-outline-info btn-sm mb-2">
+                                                <i class="fas fa-user me-1"></i> View Profile
+                                            </a>
+                                            <div class="d-flex align-items-center mb-2">
+                                                <p class="text-muted mb-0 me-2">
+                                                    <i class="fas fa-envelope me-1"></i> {{ application.applicant.email|default:"No email provided" }}
+                                                </p>
+                                                {% if application.applicant.email %}
+                                                    <a href="mailto:{{ application.applicant.email }}?subject=Regarding your application for {{ job.title }}&body=Dear {{ application.applicant.get_full_name|default:application.applicant.username }},%0D%0A%0D%0A" class="btn btn-outline-success btn-sm py-0 px-2" target="_blank">
+                                                        <i class="fas fa-paper-plane"></i> Email
+                                                    </a>
+                                                {% endif %}
                                             </div>
-                                            <p class="text-muted mb-2">
-                                                <i class="fas fa-envelope me-1"></i> {{ application.applicant.email|default:"No email provided" }}
-                                            </p>
                                             <p class="text-muted mb-2">
                                                 <i class="fas fa-clock me-1"></i> Applied {{ application.applied_at|timesince }} ago
                                             </p>

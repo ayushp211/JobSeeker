@@ -5,9 +5,22 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Applicant Profile</h2>
         <div class="d-flex gap-2">
-            <a href="{% url 'messaging.start_conversation_with_job' user_id=profile.user.id job_id=job.id %}" class="btn btn-success">
-                <i class="fas fa-envelope me-2"></i>Message Candidate
+            <a href="{% url 'messaging.start_conversation_with_job' user_id=profile.user.id job_id=job.id %}" class="btn btn-primary">
+                <i class="fas fa-comments me-2"></i>Message
             </a>
+            {% if profile.email %}
+                <a href="mailto:{{ profile.email }}?subject=Regarding your application for {{ job.title }}&body=Dear {{ profile.user.get_full_name|default:profile.user.username }},%0D%0A%0D%0A" class="btn btn-success" target="_blank">
+                    <i class="fas fa-paper-plane me-2"></i>Email
+                </a>
+            {% elif profile.user.email %}
+                <a href="mailto:{{ profile.user.email }}?subject=Regarding your application for {{ job.title }}&body=Dear {{ profile.user.get_full_name|default:profile.user.username }},%0D%0A%0D%0A" class="btn btn-success" target="_blank">
+                    <i class="fas fa-paper-plane me-2"></i>Email
+                </a>
+            {% else %}
+                <button class="btn btn-secondary" disabled>
+                    <i class="fas fa-paper-plane me-2"></i>No Email
+                </button>
+            {% endif %}
             <a href="{% url 'job_postings.manage_applications' job.id %}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Back to Applicants for "{{ job.title }}"
             </a>
