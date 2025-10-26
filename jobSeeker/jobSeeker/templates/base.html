@@ -41,6 +41,9 @@
               <a class="nav-link" href="{% url 'job_postings.index' %}">Jobs</a>
               {% if user.is_authenticated %}
                 {% if user.userprofile.user_type == 'job_seeker' %}
+                  <a class="nav-link" href="{% url 'job_postings.map' %}">
+                    <i class="fas fa-map-marked-alt me-1"></i>Map View
+                  </a>
                   <a class="nav-link" href="{% url 'job_postings.recommendations' %}">
                     <i class="fas fa-star text-warning me-1"></i>Recommendations
                   </a>

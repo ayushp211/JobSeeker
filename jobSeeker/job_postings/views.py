@@ -5,6 +5,8 @@ from django.http import Http404, JsonResponse
 from django.db.models import Q
 from django.db import IntegrityError
 from collections import defaultdict
+import json
+from django.urls import reverse
 from .models import Job, JobApplication, ApplicationStatus
 from .forms import JobForm, JobSearchForm, JobApplicationForm, ApplicationStatusForm
 from user_profiles.models import JobSeekerProfile
@@ -461,4 +463,42 @@ def recommendations(request):
     return render(request, 'job_postings/recommendations.html', {
         'recommended_jobs': jobs_with_match_count,
         'user_skills': user_skills
+    })
+
+@login_required
+def job_map(request):
+    """
+    Interactive map view for job seekers to see job postings on a map.
+    """
+    # Only job seekers can access the map view
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'job_seeker':
+        messages.error(request, 'Only job seekers can view the job map.')
+        return redirect('job_postings.index')
+    
+    # Get all active jobs that have coordinates
+    jobs = Job.objects.filter(
+        is_active=True,
+        latitude__isnull=False,
+        longitude__isnull=False
+    ).select_related('posted_by')
+    
+    # Convert jobs to JSON for JavaScript
+    jobs_data = []
+    for job in jobs:
+        jobs_data.append({
+            'id': job.id,
+            'title': job.title,
+            'company': job.company,
+            'location': job.location,
+            'latitude': float(job.latitude),
+            'longitude': float(job.longitude),
+            'job_type': job.get_job_type_display(),
+            'experience_level': job.get_experience_level_display(),
+            'work_location': job.get_work_location_display(),
+            'url': reverse('job_postings.show', args=[job.id])
+        })
+    
+    return render(request, 'job_postings/map.html', {
+        'jobs_json': json.dumps(jobs_data),
+        'jobs_count': jobs.count()
     })

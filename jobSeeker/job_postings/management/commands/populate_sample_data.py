@@ -48,8 +48,98 @@ class Command(BaseCommand):
         if created:
             self.stdout.write('Created recruiter profile')
         
-        # No sample jobs - only create skills and recruiter user
+        # Create sample jobs with locations
+        sample_jobs = [
+            {
+                'title': 'Senior Software Engineer',
+                'company': 'Tech Corp',
+                'location': 'San Francisco, CA',
+                'job_type': 'full_time',
+                'experience_level': 'senior',
+                'work_location': 'hybrid',
+                'salary_min': Decimal('120000'),
+                'salary_max': Decimal('180000'),
+                'description': 'We are looking for a senior software engineer to join our innovative team.',
+                'requirements': '5+ years of experience in software development, Python, Django, PostgreSQL',
+                'is_active': True,
+            },
+            {
+                'title': 'Full Stack Developer',
+                'company': 'StartupXYZ',
+                'location': 'Atlanta, GA',
+                'job_type': 'full_time',
+                'experience_level': 'mid',
+                'work_location': 'remote',
+                'salary_min': Decimal('90000'),
+                'salary_max': Decimal('120000'),
+                'description': 'Join our dynamic team as a full stack developer working on cutting-edge web applications.',
+                'requirements': 'JavaScript, React, Node.js, 3+ years experience',
+                'is_active': True,
+            },
+            {
+                'title': 'Data Scientist',
+                'company': 'DataTech Inc',
+                'location': 'New York, NY',
+                'job_type': 'full_time',
+                'experience_level': 'mid',
+                'work_location': 'on_site',
+                'salary_min': Decimal('100000'),
+                'salary_max': Decimal('150000'),
+                'description': 'Seeking a talented data scientist to work on machine learning projects.',
+                'requirements': 'Python, Machine Learning, SQL, Statistics background',
+                'is_active': True,
+            },
+            {
+                'title': 'Frontend Developer',
+                'company': 'WebApps Co',
+                'location': 'Seattle, WA',
+                'job_type': 'full_time',
+                'experience_level': 'entry',
+                'work_location': 'hybrid',
+                'salary_min': Decimal('70000'),
+                'salary_max': Decimal('95000'),
+                'description': 'We are seeking a creative frontend developer to build beautiful user interfaces.',
+                'requirements': 'HTML, CSS, JavaScript, React, portfolio required',
+                'is_active': True,
+            },
+            {
+                'title': 'DevOps Engineer',
+                'company': 'Cloud Systems',
+                'location': 'Austin, TX',
+                'job_type': 'full_time',
+                'experience_level': 'senior',
+                'work_location': 'remote',
+                'salary_min': Decimal('110000'),
+                'salary_max': Decimal('160000'),
+                'description': 'Help us build and maintain scalable cloud infrastructure.',
+                'requirements': 'AWS, Docker, Kubernetes, CI/CD, 4+ years experience',
+                'is_active': True,
+            },
+        ]
+        
+        for job_data in sample_jobs:
+            job, created = Job.objects.get_or_create(
+                title=job_data['title'],
+                company=job_data['company'],
+                location=job_data['location'],
+                defaults={
+                    **job_data,
+                    'posted_by': recruiter,
+                }
+            )
+            
+            # Try to geocode if coordinates don't exist
+            if created and (not job.latitude or not job.longitude):
+                job.geocode_location()
+                job.save()
+                
+                # Assign some skills to the job
+                available_skills = Skill.objects.all()[:5]
+                job.skills_required.set(available_skills)
+            
+            if created:
+                self.stdout.write(f'Created job: {job.title} at {job.company}')
         
         self.stdout.write(
-            self.style.SUCCESS('Successfully populated database with skills and recruiter user!')
+            self.style.SUCCESS('Successfully populated database with skills, recruiter user, and sample jobs!')
         )

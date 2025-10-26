@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="bg-primary text-white py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-map-marked-alt me-2"></i>Job Map
+                    </h2>
+                    <p class="mb-0">Find jobs near you on an interactive map - {{ jobs_count }} jobs available</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'job_postings.index' %}" class="btn btn-light">
+                        <i class="fas fa-list me-2"></i>List View
+                    </a>
+                    <a href="{% url 'job_postings.search' %}" class="btn btn-outline-light">
+                        <i class="fas fa-search me-2"></i>Search
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map" style="height: calc(100vh - 200px); width: 100%;"></div>
+
+    <!-- Info Panel -->
+    <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1000;">
+        <div class="card shadow-lg" id="info-panel" style="max-width: 300px; display: none;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Job Details</h6>
+                <button type="button" class="btn-close btn-close-white" onclick="closeInfoPanel()"></button>
+            </div>
+            <div class="card-body" id="info-content">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+<!-- Leaflet.markercluster for grouping nearby markers -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+    // Initialize map centered on a default location (e.g., Atlanta, GA)
+    var map = L.map('map').setView([33.7490, -84.3880], 5); // Default to Atlanta, zoomed out
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Get jobs data from Django template
+    var jobs = {{ jobs_json|safe }};
+
+    // Create a marker cluster group for better performance
+    var markers = L.markerClusterGroup();
+
+    // Define a custom icon
+    var jobIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background-color: #007bff; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-briefcase"></i></div>',
+        iconSize: [35, 35],
+        iconAnchor: [17, 17]
+    });
+
+    // Add markers for each job
+    jobs.forEach(function(job) {
+        var marker = L.marker([job.latitude, job.longitude], {icon: jobIcon});
+        
+        // Create popup content
+        var popupContent = `
+            <div style="min-width: 200px;">
+                <h6 class="fw-bold mb-2">${escapeHtml(job.title)}</h6>
+                <p class="mb-1"><strong>${escapeHtml(job.company)}</strong></p>
+                <p class="mb-2 text-muted small">
+                    <i class="fas fa-map-marker-alt"></i> ${escapeHtml(job.location)}
+                </p>
+                <p class="mb-1">
+                    <span class="badge bg-primary">${escapeHtml(job.job_type)}</span>
+                    <span class="badge bg-info">${escapeHtml(job.work_location)}</span>
+                </p>
+                <a href="${job.url}" class="btn btn-sm btn-primary mt-2 w-100">View Job</a>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        
+        // Add click event for info panel
+        marker.on('click', function() {
+            showInfoPanel(job);
+        });
+        
+        markers.addLayer(marker);
+    });
+
+    // Add markers to map
+    map.addLayer(markers);
+
+    // If we have jobs, fit the map to show all markers
+    if (jobs.length > 0) {
+        var bounds = markers.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, {padding: [50, 50]});
+        }
+    }
+
+    // Function to escape HTML
+    function escapeHtml(text) {
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // Function to show info panel
+    function showInfoPanel(job) {
+        var panel = document.getElementById('info-panel');
+        var content = document.getElementById('info-content');
+        
+        content.innerHTML = `
+            <h5 class="card-title">${escapeHtml(job.title)}</h5>
+            <h6 class="text-muted">${escapeHtml(job.company)}</h6>
+            <hr>
+            <p class="mb-2">
+                <i class="fas fa-map-marker-alt text-danger"></i>
+                <strong>Location:</strong> ${escapeHtml(job.location)}
+            </p>
+            <p class="mb-2">
+                <i class="fas fa-briefcase text-primary"></i>
+                <strong>Type:</strong> ${escapeHtml(job.job_type)}
+            </p>
+            <p class="mb-2">
+                <i class="fas fa-level-up-alt text-info"></i>
+                <strong>Level:</strong> ${escapeHtml(job.experience_level)}
+            </p>
+            <p class="mb-3">
+                <i class="fas fa-laptop-house text-success"></i>
+                <strong>Location:</strong> ${escapeHtml(job.work_location)}
+            </p>
+            <a href="${job.url}" class="btn btn-primary w-100">View Job Details</a>
+        `;
+        
+        panel.style.display = 'block';
+    }
+
+    // Function to close info panel
+    function closeInfoPanel() {
+        document.getElementById('info-panel').style.display = 'none';
+    }
+
+    // Close info panel when clicking outside
+    document.getElementById('map').addEventListener('click', function(e) {
+        if (e.target.id === 'map') {
+            closeInfoPanel();
+        }
+    });
+
+    // Add custom styles for markers
+    const style = document.createElement('style');
+    style.textContent = `
+        .custom-marker {
+            background: transparent;
+            border: none;
+        }
+        .custom-marker:hover {
+            transform: scale(1.1);
+        }
+    `;
+    document.head.appendChild(style);
+</script>
+
+<style>
+    /* Custom styles for the map */
+    #map {
+        border-top: 3px solid #007bff;
+    }
+    
+    .position-fixed {
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #info-panel {
+            max-width: 100% !important;
+            margin: 0 !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: 0 !important;
+            border-radius: 15px 15px 0 0;
+        }
+    }
+</style>
+{% endblock %}
+
