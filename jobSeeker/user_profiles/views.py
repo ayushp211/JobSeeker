@@ -6,7 +6,7 @@ from django.db.models import Q
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
 from job_postings.models import JobApplication, ApplicationStatus
-from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm, CandidateSearchForm
+from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm, CandidateSearchForm, LocationForm
 
 @login_required
 def profile(request):
@@ -292,3 +292,46 @@ def view_public_profile(request, user_id):
     return render(request, 'user_profiles/public_profile.html', {
         'profile': job_seeker_profile
     })
+
+@login_required
+def set_location(request):
+    """
+    View to set the user's preferred job search location.
+    Validates that the location can be geocoded before saving.
+    """
+    profile = get_object_or_404(JobSeekerProfile, user=request.user)
+    if request.method == 'POST':
+        preferred_location = request.POST.get('preferred_location', '').strip()
+        latitude = request.POST.get('latitude', '').strip()
+        longitude = request.POST.get('longitude', '').strip()
+        
+        # Validate that we have both location text and coordinates
+        if not preferred_location:
+            messages.error(request, 'Please enter a location.')
+            return redirect('user_profiles.profile')
+        
+        if not latitude or not longitude:
+            messages.error(request, 'Unable to geocode the location. Please click "Get Coordinates" to validate the location.')
+            return redirect('user_profiles.profile')
+        
+        try:
+            # Validate that coordinates are valid numbers
+            lat_float = float(latitude)
+            lng_float = float(longitude)
+            
+            # Validate coordinate ranges
+            if not (-90 <= lat_float <= 90) or not (-180 <= lng_float <= 180):
+                messages.error(request, 'Invalid coordinates. Please enter a valid location.')
+                return redirect('user_profiles.profile')
+            
+            # Save the validated data
+            profile.preferred_location = preferred_location
+            profile.latitude = lat_float
+            profile.longitude = lng_float
+            profile.save()
+            
+            messages.success(request, f'Your preferred location has been set to: {preferred_location}')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid location data. Please try again.')
+    
+    return redirect('user_profiles.profile')

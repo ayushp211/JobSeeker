@@ -14,6 +14,11 @@ class JobSeekerProfile(models.Model):
     email = models.EmailField(max_length=254, blank=True, null=True)
     headline = models.CharField(max_length=255, blank=True, null=True)
     skills = models.ManyToManyField(Skill, blank=True)
+    
+    # Location fields for distance-based job search
+    preferred_location = models.CharField(max_length=500, blank=True, null=True, help_text="Your preferred job search location")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Latitude for your location")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Longitude for your location")
 
     is_headline_public = models.BooleanField(default=True, verbose_name="Make 'About Me' Public")
     is_experience_public = models.BooleanField(default=True, verbose_name="Make Work Experience Public")

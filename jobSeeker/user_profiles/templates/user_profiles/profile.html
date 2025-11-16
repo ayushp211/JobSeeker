@@ -26,6 +26,23 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title fw-bold mb-0"><i class="fas fa-map-marker-alt me-2 text-primary"></i>Preferred Job Location</h4>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#locationModal">
+                            <i class="fas fa-pencil-alt me-1"></i> Set Location
+                        </button>
+                    </div>
+                    {% if template_data.profile.preferred_location %}
+                        <p class="fs-6"><i class="fas fa-map-pin me-2"></i>{{ template_data.profile.preferred_location }}</p>
+                        <p class="text-muted small">This location helps you filter jobs by distance on the job map</p>
+                    {% else %}
+                        <p class="text-muted fst-italic">No preferred location set. Set your location to use distance-based job filtering.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title fw-bold mb-0"><i class="fas fa-briefcase me-2 text-primary"></i>Work Experience</h4>
                         <a href="{% url 'user_profiles.add_experience' %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-plus me-1"></i> Add</a>
                     </div>
@@ -191,4 +208,139 @@
         </div>
     </div>
 </div>
+
+<!-- Location Modal -->
+<div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="locationModalLabel"><i class="fas fa-map-marker-alt me-2"></i>Set Preferred Job Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'user_profiles.set_location' %}" method="post" id="locationForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="preferred_location" class="form-label">Location <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="preferred_location" name="preferred_location" 
+                               value="{{ template_data.profile.preferred_location|default:'' }}" 
+                               placeholder="e.g., Atlanta, GA" required>
+                        <input type="hidden" id="latitude" name="latitude" value="{{ template_data.profile.latitude|default:'' }}" required>
+                        <input type="hidden" id="longitude" name="longitude" value="{{ template_data.profile.longitude|default:'' }}" required>
+                        <small class="text-muted">Enter your preferred job search location to enable distance filtering on the job map</small>
+                    </div>
+                    <div class="alert alert-info py-2 px-3 small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>Required:</strong> Click "Validate Location" to verify your location before saving.
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="geocodeBtn">
+                        <i class="fas fa-map-pin me-1"></i> Validate Location
+                    </button>
+                    <span id="geocodeStatus" class="text-muted small ms-2"></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveLocationBtn" disabled>Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Geocoding functionality for location modal
+    const geocodeBtn = document.getElementById('geocodeBtn');
+    const saveLocationBtn = document.getElementById('saveLocationBtn');
+    const locationInput = document.getElementById('preferred_location');
+    const statusEl = document.getElementById('geocodeStatus');
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+    
+    // Check if location is already validated on modal open
+    const locationModal = document.getElementById('locationModal');
+    locationModal?.addEventListener('show.bs.modal', function() {
+        // If there are existing coordinates, enable the save button
+        if (latInput.value && lngInput.value) {
+            saveLocationBtn.disabled = false;
+            statusEl.textContent = '✓ Location validated';
+            statusEl.className = 'text-success small ms-2';
+        } else {
+            saveLocationBtn.disabled = true;
+            statusEl.textContent = '';
+        }
+    });
+    
+    // Disable save button when location text changes
+    locationInput?.addEventListener('input', function() {
+        saveLocationBtn.disabled = true;
+        latInput.value = '';
+        lngInput.value = '';
+        statusEl.textContent = 'Please validate location';
+        statusEl.className = 'text-warning small ms-2';
+    });
+    
+    // Geocode button functionality
+    geocodeBtn?.addEventListener('click', function() {
+        const location = locationInput.value.trim();
+        
+        if (!location) {
+            statusEl.textContent = '⚠ Please enter a location first';
+            statusEl.className = 'text-danger small ms-2';
+            return;
+        }
+        
+        // Disable button and show loading
+        geocodeBtn.disabled = true;
+        geocodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Validating...';
+        statusEl.textContent = 'Searching for location...';
+        statusEl.className = 'text-info small ms-2';
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    latInput.value = data[0].lat;
+                    lngInput.value = data[0].lon;
+                    statusEl.textContent = '✓ Location validated successfully!';
+                    statusEl.className = 'text-success small ms-2';
+                    saveLocationBtn.disabled = false;
+                    
+                    // Show the validated location name
+                    if (data[0].display_name) {
+                        const shortName = data[0].display_name.split(',').slice(0, 3).join(',');
+                        statusEl.textContent = `✓ Found: ${shortName}`;
+                    }
+                } else {
+                    statusEl.textContent = '✗ Location not found. Please try a different location (e.g., "New York, NY" or "London, UK")';
+                    statusEl.className = 'text-danger small ms-2';
+                    latInput.value = '';
+                    lngInput.value = '';
+                    saveLocationBtn.disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error('Geocoding error:', error);
+                statusEl.textContent = '✗ Error validating location. Please try again.';
+                statusEl.className = 'text-danger small ms-2';
+                latInput.value = '';
+                lngInput.value = '';
+                saveLocationBtn.disabled = true;
+            })
+            .finally(() => {
+                // Re-enable button
+                geocodeBtn.disabled = false;
+                geocodeBtn.innerHTML = '<i class="fas fa-map-pin me-1"></i> Validate Location';
+            });
+    });
+    
+    // Form submission validation
+    document.getElementById('locationForm')?.addEventListener('submit', function(e) {
+        if (!latInput.value || !lngInput.value) {
+            e.preventDefault();
+            statusEl.textContent = '⚠ Please validate the location before saving';
+            statusEl.className = 'text-danger small ms-2';
+            return false;
+        }
+    });
+</script>
 {% endblock content %}

@@ -475,6 +475,19 @@ def job_map(request):
         messages.error(request, 'Only job seekers can view the job map.')
         return redirect('job_postings.index')
     
+    # Get user's location from their profile
+    user_location = None
+    try:
+        profile = JobSeekerProfile.objects.get(user=request.user)
+        if profile.latitude and profile.longitude:
+            user_location = {
+                'location': profile.preferred_location,
+                'latitude': float(profile.latitude),
+                'longitude': float(profile.longitude)
+            }
+    except JobSeekerProfile.DoesNotExist:
+        pass
+    
     # Get all active jobs that have coordinates
     jobs = Job.objects.filter(
         is_active=True,
@@ -500,5 +513,6 @@ def job_map(request):
     
     return render(request, 'job_postings/map.html', {
         'jobs_json': json.dumps(jobs_data),
-        'jobs_count': jobs.count()
+        'jobs_count': jobs.count(),
+        'user_location': json.dumps(user_location) if user_location else 'null'
     })

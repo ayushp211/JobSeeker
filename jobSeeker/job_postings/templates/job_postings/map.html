@@ -11,9 +11,12 @@
                     <h2 class="mb-0">
                         <i class="fas fa-map-marked-alt me-2"></i>Job Map
                     </h2>
-                    <p class="mb-0">Find jobs near you on an interactive map - {{ jobs_count }} jobs available</p>
+                    <p class="mb-0">Find jobs near you on an interactive map - <span id="visible-jobs-count">{{ jobs_count }}</span> jobs visible</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <button class="btn btn-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterMenu">
+                        <i class="fas fa-filter me-2"></i>Filters
+                    </button>
                     <a href="{% url 'job_postings.index' %}" class="btn btn-light">
                         <i class="fas fa-list me-2"></i>List View
                     </a>
@@ -26,7 +29,71 @@
     </div>
 
     <!-- Map Container -->
-    <div id="map" style="height: calc(100vh - 200px); width: 100%;"></div>
+    <div id="map" style="height: calc(100vh - 140px); width: 100%;"></div>
+
+    <!-- Filter Menu Offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="filterMenu" aria-labelledby="filterMenuLabel">
+        <div class="offcanvas-header bg-primary text-white">
+            <h5 class="offcanvas-title" id="filterMenuLabel">
+                <i class="fas fa-filter me-2"></i>Filter Jobs
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- Distance Filter Section -->
+            <div class="mb-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-location-arrow me-2 text-primary"></i>Distance Filter
+                </h6>
+                
+                <div class="mb-3">
+                    <label for="distanceRange" class="form-label d-flex justify-content-between">
+                        <span>Maximum Distance</span>
+                        <span class="badge bg-primary" id="distanceValue">200 miles</span>
+                    </label>
+                    <input type="range" class="form-range" id="distanceRange" min="5" max="200" value="200" step="5">
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>5 mi</span>
+                        <span>200 mi</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info py-2 px-3 small mb-3" id="locationRequiredAlert">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Set your location to use distance filtering
+                </div>
+
+                <div class="alert alert-success py-2 px-3 small mb-3" id="locationSetAlert" style="display: none;">
+                    <i class="fas fa-check-circle me-1"></i>
+                    <span id="userLocationText"></span>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm" id="useCurrentLocation">
+                        <i class="fas fa-crosshairs me-1"></i> Use Current Location
+                    </button>
+                    {% if user_location %}
+                    <button class="btn btn-outline-primary btn-sm" id="useSavedLocation">
+                        <i class="fas fa-map-marker-alt me-1"></i> Use Saved Location
+                    </button>
+                    {% else %}
+                    <a href="{% url 'user_profiles.profile' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-user-cog me-1"></i> Set Preferred Location
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Reset Filters -->
+            <div class="d-grid">
+                <button class="btn btn-outline-danger btn-sm" id="resetFilter">
+                    <i class="fas fa-redo me-1"></i> Reset All Filters
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Info Panel -->
     <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1000;">
@@ -66,13 +133,18 @@
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Get jobs data from Django template
+    // Get jobs data and user location from Django template
     var jobs = {{ jobs_json|safe }};
+    var savedUserLocation = {{ user_location|safe }}; // Store the original saved location
+    var userLocation = {{ user_location|safe }};
+    var userLocationMarker = null;
+    var distanceCircle = null;
 
     // Create a marker cluster group for better performance
     var markers = L.markerClusterGroup();
+    var allMarkers = []; // Store all markers for filtering
 
-    // Define a custom icon
+    // Define custom icons
     var jobIcon = L.divIcon({
         className: 'custom-marker',
         html: '<div style="background-color: #007bff; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-briefcase"></i></div>',
@@ -80,9 +152,29 @@
         iconAnchor: [17, 17]
     });
 
+    var userIcon = L.divIcon({
+        className: 'custom-marker',
+        html: '<div style="background-color: #28a745; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-user"></i></div>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+
+    // Calculate distance between two coordinates using Haversine formula
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 3959; // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; // Distance in miles
+    }
+
     // Add markers for each job
     jobs.forEach(function(job) {
         var marker = L.marker([job.latitude, job.longitude], {icon: jobIcon});
+        marker.jobData = job; // Store job data with marker
         
         // Create popup content
         var popupContent = `
@@ -107,19 +199,238 @@
             showInfoPanel(job);
         });
         
-        markers.addLayer(marker);
+        allMarkers.push(marker);
     });
 
-    // Add markers to map
-    map.addLayer(markers);
+    // Function to filter markers based on distance
+    function filterMarkersByDistance(maxDistance) {
+        if (!userLocation) {
+            // If no user location, show all markers
+            markers.clearLayers();
+            allMarkers.forEach(marker => markers.addLayer(marker));
+            map.addLayer(markers);
+            updateVisibleCount(allMarkers.length);
+            return;
+        }
 
-    // If we have jobs, fit the map to show all markers
-    if (jobs.length > 0) {
+        markers.clearLayers();
+        let visibleCount = 0;
+        
+        allMarkers.forEach(function(marker) {
+            const distance = calculateDistance(
+                userLocation.latitude, 
+                userLocation.longitude, 
+                marker.jobData.latitude, 
+                marker.jobData.longitude
+            );
+            
+            if (distance <= maxDistance) {
+                markers.addLayer(marker);
+                visibleCount++;
+            }
+        });
+        
+        map.addLayer(markers);
+        updateVisibleCount(visibleCount);
+        
+        // Update distance circle
+        if (distanceCircle) {
+            map.removeLayer(distanceCircle);
+        }
+        distanceCircle = L.circle([userLocation.latitude, userLocation.longitude], {
+            color: '#28a745',
+            fillColor: '#28a745',
+            fillOpacity: 0.1,
+            radius: maxDistance * 1609.34 // Convert miles to meters
+        }).addTo(map);
+    }
+
+    // Update visible jobs count
+    function updateVisibleCount(count) {
+        document.getElementById('visible-jobs-count').textContent = count;
+    }
+
+    // Toggle location button active states
+    function setActiveLocationButton(buttonId) {
+        const currentBtn = document.getElementById('useCurrentLocation');
+        const savedBtn = document.getElementById('useSavedLocation');
+        
+        if (currentBtn) {
+            currentBtn.classList.remove('btn-primary');
+            currentBtn.classList.add('btn-outline-primary');
+        }
+        
+        if (savedBtn) {
+            savedBtn.classList.remove('btn-primary');
+            savedBtn.classList.add('btn-outline-primary');
+        }
+        
+        // Set the active button
+        const activeBtn = document.getElementById(buttonId);
+        if (activeBtn) {
+            activeBtn.classList.remove('btn-outline-primary');
+            activeBtn.classList.add('btn-primary');
+        }
+    }
+
+    // Show user location on map
+    function showUserLocation(lat, lng, locationText, sourceButton) {
+        userLocation = { latitude: lat, longitude: lng, location: locationText };
+        
+        // Remove existing marker if any
+        if (userLocationMarker) {
+            map.removeLayer(userLocationMarker);
+        }
+        
+        // Add user location marker
+        userLocationMarker = L.marker([lat, lng], {icon: userIcon})
+            .addTo(map)
+            .bindPopup('<strong>Your Location</strong><br>' + locationText);
+        
+        // Update UI alerts
+        document.getElementById('locationRequiredAlert').style.display = 'none';
+        document.getElementById('locationSetAlert').style.display = 'block';
+        document.getElementById('userLocationText').textContent = 'Filtering from: ' + locationText;
+        
+        // Update button active states
+        if (sourceButton) {
+            setActiveLocationButton(sourceButton);
+        }
+        
+        // Center map on user location
+        map.setView([lat, lng], 10);
+        
+        // Apply current filter
+        const maxDistance = parseInt(document.getElementById('distanceRange').value);
+        filterMarkersByDistance(maxDistance);
+    }
+
+    // Initialize with user's saved location if available
+    if (userLocation) {
+        showUserLocation(userLocation.latitude, userLocation.longitude, userLocation.location, 'useSavedLocation');
+    } else {
+        // Show all markers initially
+        filterMarkersByDistance(200);
+    }
+
+    // If we have jobs and no user location, fit the map to show all markers
+    if (jobs.length > 0 && !userLocation) {
         var bounds = markers.getBounds();
         if (bounds.isValid()) {
             map.fitBounds(bounds, {padding: [50, 50]});
         }
     }
+
+    // Distance range slider event
+    document.getElementById('distanceRange').addEventListener('input', function(e) {
+        const distance = e.target.value;
+        document.getElementById('distanceValue').textContent = distance + ' miles';
+        if (userLocation) {
+            filterMarkersByDistance(parseInt(distance));
+        }
+    });
+
+    // Use saved location button (if available)
+    const useSavedLocationBtn = document.getElementById('useSavedLocation');
+    if (useSavedLocationBtn && savedUserLocation) {
+        useSavedLocationBtn.addEventListener('click', function() {
+            showUserLocation(savedUserLocation.latitude, savedUserLocation.longitude, savedUserLocation.location, 'useSavedLocation');
+        });
+    }
+
+    // Use current location button
+    document.getElementById('useCurrentLocation').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Getting location...';
+            this.disabled = true;
+            const btn = this;
+            
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Reverse geocode to get location name
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const locationText = data.display_name || 'Current Location';
+                        showUserLocation(lat, lng, locationText, 'useCurrentLocation');
+                        btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Use Current Location';
+                        btn.disabled = false;
+                    })
+                    .catch(error => {
+                        showUserLocation(lat, lng, 'Current Location', 'useCurrentLocation');
+                        btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Use Current Location';
+                        btn.disabled = false;
+                    });
+            }, function(error) {
+                let errorMessage = 'Unable to get your location. ';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += 'Please allow location access in your browser settings.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += 'Location information is unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += 'Location request timed out.';
+                        break;
+                    default:
+                        errorMessage += 'An unknown error occurred.';
+                }
+                alert(errorMessage);
+                btn.innerHTML = '<i class="fas fa-crosshairs me-1"></i> Use Current Location';
+                btn.disabled = false;
+            });
+        } else {
+            alert('Geolocation is not supported by your browser.');
+        }
+    });
+
+    // Reset filter button
+    document.getElementById('resetFilter').addEventListener('click', function() {
+        document.getElementById('distanceRange').value = 200;
+        document.getElementById('distanceValue').textContent = '200 miles';
+        
+        // Remove user location marker and circle
+        if (userLocationMarker) {
+            map.removeLayer(userLocationMarker);
+            userLocationMarker = null;
+        }
+        if (distanceCircle) {
+            map.removeLayer(distanceCircle);
+            distanceCircle = null;
+        }
+        
+        // Reset userLocation to saved location or null
+        userLocation = savedUserLocation;
+        
+        // Update UI
+        if (savedUserLocation) {
+            document.getElementById('locationRequiredAlert').style.display = 'none';
+            document.getElementById('locationSetAlert').style.display = 'block';
+            document.getElementById('userLocationText').textContent = 'Filtering from: ' + savedUserLocation.location + ' (saved)';
+            setActiveLocationButton('useSavedLocation');
+        } else {
+            document.getElementById('locationRequiredAlert').style.display = 'block';
+            document.getElementById('locationSetAlert').style.display = 'none';
+            setActiveLocationButton(null); // Clear all active states
+        }
+        
+        // Show all markers
+        filterMarkersByDistance(200);
+        
+        // Fit map to show all markers
+        if (allMarkers.length > 0) {
+            markers.clearLayers();
+            allMarkers.forEach(marker => markers.addLayer(marker));
+            map.addLayer(markers);
+            var bounds = markers.getBounds();
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {padding: [50, 50]});
+            }
+        }
+    });
 
     // Function to escape HTML
     function escapeHtml(text) {
@@ -138,10 +449,27 @@
         var panel = document.getElementById('info-panel');
         var content = document.getElementById('info-content');
         
+        let distanceInfo = '';
+        if (userLocation) {
+            const distance = calculateDistance(
+                userLocation.latitude, 
+                userLocation.longitude, 
+                job.latitude, 
+                job.longitude
+            );
+            distanceInfo = `
+                <p class="mb-2">
+                    <i class="fas fa-route text-warning"></i>
+                    <strong>Distance:</strong> ${distance.toFixed(1)} miles away
+                </p>
+            `;
+        }
+        
         content.innerHTML = `
             <h5 class="card-title">${escapeHtml(job.title)}</h5>
             <h6 class="text-muted">${escapeHtml(job.company)}</h6>
             <hr>
+            ${distanceInfo}
             <p class="mb-2">
                 <i class="fas fa-map-marker-alt text-danger"></i>
                 <strong>Location:</strong> ${escapeHtml(job.location)}
@@ -156,7 +484,7 @@
             </p>
             <p class="mb-3">
                 <i class="fas fa-laptop-house text-success"></i>
-                <strong>Location:</strong> ${escapeHtml(job.work_location)}
+                <strong>Work Location:</strong> ${escapeHtml(job.work_location)}
             </p>
             <a href="${job.url}" class="btn btn-primary w-100">View Job Details</a>
         `;

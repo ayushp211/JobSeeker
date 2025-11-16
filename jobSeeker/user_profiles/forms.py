@@ -9,6 +9,16 @@ class HeadlineForm(forms.ModelForm):
             'headline': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
         }
 
+class LocationForm(forms.ModelForm):
+    class Meta:
+        model = JobSeekerProfile
+        fields = ['preferred_location', 'latitude', 'longitude']
+        widgets = {
+            'preferred_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Atlanta, GA'}),
+            'latitude': forms.HiddenInput(),
+            'longitude': forms.HiddenInput(),
+        }
+
 class WorkExperienceForm(forms.ModelForm):
     class Meta:
         model = WorkExperience
