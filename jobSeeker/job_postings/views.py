@@ -10,6 +10,11 @@ from django.urls import reverse
 from .models import Job, JobApplication, ApplicationStatus
 from .forms import JobForm, JobSearchForm, JobApplicationForm, ApplicationStatusForm
 from user_profiles.models import JobSeekerProfile
+from .recommendation_service import (
+    get_candidate_recommendations_for_job,
+    _calculate_experience_match,
+    _calculate_profile_completeness_score,
+)
 
 def index(request):
     jobs = Job.objects.filter(is_active=True)
@@ -230,6 +235,79 @@ def manage_applications(request, id):
         'applications': applications,
         'status_filter': status_filter,
         'all_statuses': all_statuses,
+    })
+
+
+@login_required
+def candidate_recommendations(request, id):
+    """
+    US#16: Recruiter-facing view to see recommended candidates for a specific job.
+    Uses the candidate recommendation service and does not replace existing functionality.
+    """
+    job = get_object_or_404(Job, id=id)
+
+    # Ensure only the recruiter who posted the job can view recommendations
+    if job.posted_by != request.user:
+        messages.error(request, 'You can only view recommendations for your own job postings.')
+        return redirect('job_postings.show', id=id)
+
+    # Ensure user is a recruiter
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can view candidate recommendations.')
+        return redirect('job_postings.show', id=id)
+
+    # Build recommendations only among candidates who have actually applied
+    applications = JobApplication.objects.filter(job=job).select_related('applicant')
+    applied_user_ids = [app.applicant_id for app in applications]
+
+    profiles = JobSeekerProfile.objects.filter(user_id__in=applied_user_ids)
+
+    required_skills_qs = job.skills_required.all()
+    required_skills = list(required_skills_qs)
+    required_skill_names = {s.name.strip().lower() for s in required_skills}
+
+    recommendations = []
+    for profile in profiles:
+        profile_skills = list(profile.skills.all())
+        matching_skills = [
+            skill for skill in profile_skills
+            if skill.name and skill.name.strip().lower() in required_skill_names
+        ]
+        skill_match_count = len(matching_skills)
+        total_required_skills = len(required_skills)
+
+        # Primary factor: skill overlap
+        skill_match_percentage = (
+            (skill_match_count / total_required_skills) * 100
+            if total_required_skills > 0 else 0
+        )
+
+        # Secondary factor: experience level compatibility
+        experience_score = _calculate_experience_match(job, profile)
+
+        # Tertiary factor: profile completeness
+        completeness_score = _calculate_profile_completeness_score(profile)
+
+        match_score = (
+            skill_match_percentage * 0.7 +
+            experience_score * 0.2 +
+            completeness_score * 0.1
+        )
+
+        recommendations.append({
+            'profile': profile,
+            'match_score': match_score,
+            'matching_skills': matching_skills,
+            'skill_match_count': skill_match_count,
+            'total_required_skills': total_required_skills,
+        })
+
+    # Sort applicants by match score, highest first
+    recommendations.sort(key=lambda x: x['match_score'], reverse=True)
+
+    return render(request, 'job_postings/candidate_recommendations.html', {
+        'job': job,
+        'recommendations': recommendations,
     })
 
 @login_required

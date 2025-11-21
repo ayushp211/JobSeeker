@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="mb-1">Candidate Recommendations</h1>
+      <h4 class="text-primary">{{ job.title }} at {{ job.company }}</h4>
+      <p class="text-muted mb-0">
+        These candidates are recommended based on required skills, experience level, and profile completeness.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'job_postings.manage_applications' job.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-users me-1"></i> Manage Applications
+      </a>
+      <a href="{% url 'job_postings.pipeline' job.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-columns me-1"></i> View Pipeline
+      </a>
+      <a href="{% url 'job_postings.show' job.id %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Job
+      </a>
+    </div>
+  </div>
+
+  {% if recommendations %}
+    <div class="row">
+      {% for item in recommendations %}
+        {% with profile=item.profile %}
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <div class="mb-2">
+                <h5 class="card-title mb-1">
+                  {{ profile.first_name|default:profile.user.username }} {{ profile.last_name }}
+                </h5>
+                <p class="text-muted mb-1">
+                  <i class="fas fa-envelope me-1"></i>
+                  {{ profile.email|default:profile.user.email|default:"No email provided" }}
+                </p>
+              </div>
+
+              {% if profile.headline %}
+                <p class="mb-2 small">
+                  {{ profile.headline|truncatewords:20 }}
+                </p>
+              {% endif %}
+
+              {% if item.matching_skills %}
+                <div class="mb-2">
+                  <h6 class="mb-1 small text-muted">
+                    Matching skills ({{ item.skill_match_count }}/{{ item.total_required_skills }} required)
+                  </h6>
+                  <div class="d-flex flex-wrap gap-1">
+                    {% for skill in item.matching_skills %}
+                      <span class="badge bg-success">{{ skill.name }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+
+              <div class="mt-auto pt-2 d-flex flex-wrap gap-2">
+                <a href="{% url 'user_profiles.view_public_profile' profile.user.id %}"
+                   class="btn btn-outline-info btn-sm w-100">
+                  <i class="fas fa-user me-1"></i> View Public Profile
+                </a>
+                <a href="{% url 'messaging.start_conversation_with_job' user_id=profile.user.id job_id=job.id %}"
+                   class="btn btn-primary btn-sm w-100">
+                  <i class="fas fa-comments me-1"></i> Message Candidate
+                </a>
+                {% if profile.email or profile.user.email %}
+                  <a href="mailto:{{ profile.email|default:profile.user.email }}?subject=Opportunity for {{ job.title }} at {{ job.company }}&body=Dear {{ profile.user.get_full_name|default:profile.user.username }},%0D%0A%0D%0A"
+                     class="btn btn-success btn-sm w-100" target="_blank">
+                    <i class="fas fa-paper-plane me-1"></i> Email
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-5">
+      <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+      <h4 class="text-muted">No recommendations yet</h4>
+      <p class="text-muted mb-3">
+        Recommendations will appear here once there are job seekers with matching skills
+        who have not already applied to this job.
+      </p>
+      <a href="{% url 'user_profiles.search_candidates' %}" class="btn btn-primary">
+        <i class="fas fa-search me-1"></i> Search Candidates Manually
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+

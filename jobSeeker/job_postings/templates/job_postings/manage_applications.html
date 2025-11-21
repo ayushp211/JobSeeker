@@ -9,7 +9,10 @@
                     <h1 class="mb-1">Manage Applications</h1>
                     <h4 class="text-primary">{{ job.title }} at {{ job.company }}</h4>
                 </div>
-                <div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'job_postings.candidate_recommendations' job.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-check me-1"></i> Recommended Candidates
+                    </a>
                     <a href="{% url 'job_postings.show' job.id %}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> Back to Job
                     </a>
