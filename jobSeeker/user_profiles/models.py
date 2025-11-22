@@ -16,9 +16,10 @@ class JobSeekerProfile(models.Model):
     skills = models.ManyToManyField(Skill, blank=True)
     
     # Location fields for distance-based job search
-    preferred_location = models.CharField(max_length=500, blank=True, null=True, help_text="Your preferred job search location")
+    preferred_location = models.CharField(max_length=500, blank=True, null=True, help_text="Your preferred job search location (e.g., 'Atlanta, GA')")
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Latitude for your location")
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Longitude for your location")
+    commute_radius = models.DecimalField(max_digits=5, decimal_places=1, default=25.0, help_text="Preferred commute radius in miles")
 
     is_headline_public = models.BooleanField(default=True, verbose_name="Make 'About Me' Public")
     is_experience_public = models.BooleanField(default=True, verbose_name="Make Work Experience Public")
@@ -28,6 +29,32 @@ class JobSeekerProfile(models.Model):
     
     def __str__(self):
         return f"Job Seeker Profile for {self.user.username}"
+    
+    def geocode_preferred_location(self):
+        """Geocode the preferred_location field to get latitude and longitude coordinates"""
+        if not self.preferred_location:
+            return False
+        
+        import urllib.request
+        import urllib.parse
+        import json
+        
+        try:
+            # Use OpenStreetMap Nominatim API for geocoding
+            encoded_location = urllib.parse.quote(self.preferred_location)
+            url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_location}&limit=1"
+            
+            with urllib.request.urlopen(url, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode())
+                    if data and len(data) > 0:
+                        self.latitude = float(data[0]['lat'])
+                        self.longitude = float(data[0]['lon'])
+                        return True
+        except Exception as e:
+            print(f"Geocoding error: {e}")
+        
+        return False
 
 class Education(models.Model):
     profile = models.ForeignKey(JobSeekerProfile, on_delete=models.CASCADE, related_name='education')

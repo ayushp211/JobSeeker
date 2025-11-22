@@ -6,7 +6,7 @@ from django.db.models import Q
 from .models import JobSeekerProfile, WorkExperience, Education, Link, Skill
 from user_accounts.models import UserProfile
 from job_postings.models import JobApplication, ApplicationStatus
-from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm, CandidateSearchForm, LocationForm
+from .forms import HeadlineForm, WorkExperienceForm, EducationForm, SkillsForm, LinkForm, ProfilePrivacyForm, CandidateSearchForm, LocationForm, CommutePreferencesForm
 
 @login_required
 def profile(request):
@@ -181,6 +181,30 @@ def manage_privacy(request):
         else:
             messages.error(request, 'There was an error updating your settings.')
     return redirect('user_profiles.profile')
+
+@login_required
+def edit_commute_preferences(request):
+    """
+    View to edit the user's commute preferences (location and radius).
+    """
+    profile = get_object_or_404(JobSeekerProfile, user=request.user)
+    
+    if request.method == 'POST':
+        form = CommutePreferencesForm(request.POST, instance=profile)
+        if form.is_valid():
+            profile = form.save(commit=False)
+            # Geocode the preferred location if it was changed
+            if 'preferred_location' in form.changed_data and profile.preferred_location:
+                profile.geocode_preferred_location()
+            profile.save()
+            messages.success(request, 'Your commute preferences have been updated successfully.')
+            return redirect('user_profiles.profile')
+        else:
+            messages.error(request, 'There was an error updating your commute preferences.')
+    else:
+        form = CommutePreferencesForm(instance=profile)
+    
+    return render(request, 'user_profiles/edit_commute_preferences.html', {'form': form, 'profile': profile})
 
 @login_required
 def search_candidates(request):

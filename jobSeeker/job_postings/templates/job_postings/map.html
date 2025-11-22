@@ -13,7 +13,15 @@
                     </h2>
                     <p class="mb-0">Find jobs near you on an interactive map - <span id="visible-jobs-count">{{ jobs_count }}</span> jobs visible</p>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if has_commute_filter %}
+                    <button id="toggle-filter-btn" class="btn btn-success" onclick="toggleJobFilter()">
+                        <i class="fas fa-filter me-2"></i><span id="filter-btn-text">Show All Jobs ({{ all_jobs_count }})</span>
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'user_profiles.edit_commute_preferences' %}" class="btn btn-warning">
+                        <i class="fas fa-cog me-2"></i>Commute Settings
+                    </a>
                     <button class="btn btn-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#filterMenu">
                         <i class="fas fa-filter me-2"></i>Filters
                     </button>
@@ -134,11 +142,17 @@
     }).addTo(map);
 
     // Get jobs data and user location from Django template
-    var jobs = {{ jobs_json|safe }};
+    var filteredJobs = {{ jobs_json|safe }};
+    var allJobs = {{ all_jobs_json|safe }};
+    var jobs = filteredJobs; // Start with filtered jobs
+    var showingFilteredJobs = true;
     var savedUserLocation = {{ user_location|safe }}; // Store the original saved location
     var userLocation = {{ user_location|safe }};
+    var commuteRadius = {{ commute_radius|default:"null" }};
     var userLocationMarker = null;
     var distanceCircle = null;
+    var radiusCircle = null;
+    var homeMarker = null;
 
     // Create a marker cluster group for better performance
     var markers = L.markerClusterGroup();
@@ -146,10 +160,17 @@
 
     // Define custom icons
     var jobIcon = L.divIcon({
-        className: 'custom-marker',
-        html: '<div style="background-color: #007bff; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-briefcase"></i></div>',
-        iconSize: [35, 35],
-        iconAnchor: [17, 17]
+        className: 'custom-job-marker',
+        html: '<div style="background-color: #007bff; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.4); position: relative; z-index: 1000;"><i class="fas fa-briefcase"></i></div>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+
+    var homeIcon = L.divIcon({
+        className: 'custom-home-marker',
+        html: '<div style="background-color: #28a745; color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3); position: relative; z-index: 500;"><i class="fas fa-home"></i></div>',
+        iconSize: [45, 45],
+        iconAnchor: [22.5, 22.5]
     });
 
     var userIcon = L.divIcon({
@@ -303,6 +324,116 @@
         // Apply current filter
         const maxDistance = parseInt(document.getElementById('distanceRange').value);
         filterMarkersByDistance(maxDistance);
+    }
+
+    // Toggle function for filtered vs all jobs
+    function toggleJobFilter() {
+        showingFilteredJobs = !showingFilteredJobs;
+        var btn = document.getElementById('toggle-filter-btn');
+        var btnText = document.getElementById('filter-btn-text');
+        
+        if (showingFilteredJobs) {
+            // Show filtered jobs
+            jobs = filteredJobs;
+            btn.className = 'btn btn-success';
+            btnText.innerHTML = `Show All Jobs (${allJobs.length})`;
+            
+            // Show radius circle if commute preferences are set
+            if (userLocation && commuteRadius) {
+                if (radiusCircle) {
+                    map.removeLayer(radiusCircle);
+                }
+                radiusCircle = L.circle([userLocation.latitude, userLocation.longitude], {
+                    color: '#28a745',
+                    fillColor: '#28a745',
+                    fillOpacity: 0.1,
+                    radius: commuteRadius * 1609.34 // Convert miles to meters
+                }).addTo(map);
+            }
+        } else {
+            // Show all jobs
+            jobs = allJobs;
+            btn.className = 'btn btn-warning';
+            btnText.innerHTML = `Show Filtered Jobs (${filteredJobs.length})`;
+            
+            // Hide radius circle
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+                radiusCircle = null;
+            }
+        }
+        
+        // Rebuild markers
+        markers.clearLayers();
+        allMarkers = [];
+        jobs.forEach(function(job) {
+            var marker = L.marker([job.latitude, job.longitude], {icon: jobIcon});
+            marker.jobData = job;
+            
+            var distanceText = job.distance ? `<p class="mb-2 text-success small"><i class="fas fa-road"></i> ${job.distance} miles away</p>` : '';
+            var popupContent = `
+                <div style="min-width: 200px;">
+                    <h6 class="fw-bold mb-2">${escapeHtml(job.title)}</h6>
+                    <p class="mb-1"><strong>${escapeHtml(job.company)}</strong></p>
+                    <p class="mb-2 text-muted small">
+                        <i class="fas fa-map-marker-alt"></i> ${escapeHtml(job.location)}
+                    </p>
+                    ${distanceText}
+                    <p class="mb-1">
+                        <span class="badge bg-primary">${escapeHtml(job.job_type)}</span>
+                        <span class="badge bg-info">${escapeHtml(job.work_location)}</span>
+                    </p>
+                    <a href="${job.url}" class="btn btn-sm btn-primary mt-2 w-100">View Job</a>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            marker.on('click', function() {
+                showInfoPanel(job);
+            });
+            
+            allMarkers.push(marker);
+            markers.addLayer(marker);
+        });
+        
+        map.addLayer(markers);
+        updateVisibleCount(jobs.length);
+        
+        // Refit map bounds
+        if (markers.getLayers().length > 0) {
+            var bounds = markers.getBounds();
+            if (userLocation && showingFilteredJobs) {
+                bounds.extend([userLocation.latitude, userLocation.longitude]);
+            }
+            if (bounds.isValid()) {
+                map.fitBounds(bounds, {padding: [50, 50]});
+            }
+        }
+    }
+
+    // Add home marker if commute preferences are set
+    if (userLocation && commuteRadius) {
+        homeMarker = L.marker([userLocation.latitude, userLocation.longitude], {icon: homeIcon})
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-home"></i> Your Location</h6>
+                    <p class="mb-2">${escapeHtml(userLocation.address)}</p>
+                    <p class="mb-0 small text-muted">
+                        Commute radius: ${commuteRadius} miles
+                    </p>
+                </div>
+            `)
+            .addTo(map);
+        
+        // Add the radius circle for filtered view
+        if (showingFilteredJobs) {
+            radiusCircle = L.circle([userLocation.latitude, userLocation.longitude], {
+                color: '#28a745',
+                fillColor: '#28a745',
+                fillOpacity: 0.1,
+                radius: commuteRadius * 1609.34 // Convert miles to meters
+            }).addTo(map);
+        }
     }
 
     // Initialize with user's saved location if available
@@ -537,6 +668,29 @@
             transform: translateY(0);
             opacity: 1;
         }
+    }
+
+    /* Custom marker styles for better visibility */
+    .custom-job-marker {
+        background: transparent;
+        border: none;
+        z-index: 1000 !important;
+    }
+    .custom-job-marker:hover {
+        transform: scale(1.15);
+        z-index: 1001 !important;
+    }
+    .custom-home-marker {
+        background: transparent;
+        border: none;
+        z-index: 500 !important;
+    }
+    .custom-home-marker:hover {
+        transform: scale(1.1);
+        z-index: 501 !important;
+    }
+    .leaflet-marker-pane {
+        z-index: 600 !important;
     }
 
     /* Responsive adjustments */

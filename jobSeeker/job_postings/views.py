@@ -547,24 +547,18 @@ def recommendations(request):
 def job_map(request):
     """
     Interactive map view for job seekers to see job postings on a map.
+    Jobs are filtered based on the user's commute radius preference.
     """
     # Only job seekers can access the map view
     if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'job_seeker':
         messages.error(request, 'Only job seekers can view the job map.')
         return redirect('job_postings.index')
     
-    # Get user's location from their profile
-    user_location = None
+    # Get the job seeker's profile
     try:
         profile = JobSeekerProfile.objects.get(user=request.user)
-        if profile.latitude and profile.longitude:
-            user_location = {
-                'location': profile.preferred_location,
-                'latitude': float(profile.latitude),
-                'longitude': float(profile.longitude)
-            }
     except JobSeekerProfile.DoesNotExist:
-        pass
+        profile = None
     
     # Get all active jobs that have coordinates
     jobs = Job.objects.filter(
@@ -573,24 +567,114 @@ def job_map(request):
         longitude__isnull=False
     ).select_related('posted_by')
     
+    # Helper function to calculate distance between two points using Haversine formula
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        """Calculate distance in miles between two coordinates"""
+        from math import radians, sin, cos, sqrt, atan2
+        
+        R = 3959  # Earth's radius in miles
+        
+        lat1_rad = radians(float(lat1))
+        lon1_rad = radians(float(lon1))
+        lat2_rad = radians(float(lat2))
+        lon2_rad = radians(float(lon2))
+        
+        dlat = lat2_rad - lat1_rad
+        dlon = lon2_rad - lon1_rad
+        
+        a = sin(dlat / 2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        
+        return R * c
+    
     # Convert jobs to JSON for JavaScript
     jobs_data = []
-    for job in jobs:
-        jobs_data.append({
-            'id': job.id,
-            'title': job.title,
-            'company': job.company,
-            'location': job.location,
-            'latitude': float(job.latitude),
-            'longitude': float(job.longitude),
-            'job_type': job.get_job_type_display(),
-            'experience_level': job.get_experience_level_display(),
-            'work_location': job.get_work_location_display(),
-            'url': reverse('job_postings.show', args=[job.id])
-        })
+    user_location = None
+    commute_radius = None
+    
+    # Check if user has set commute preferences
+    if profile and profile.preferred_location and profile.latitude and profile.longitude:
+        user_location = {
+            'latitude': float(profile.latitude),
+            'longitude': float(profile.longitude),
+            'address': profile.preferred_location
+        }
+        commute_radius = float(profile.commute_radius)
+        
+        # Filter jobs by distance
+        filtered_jobs = []
+        for job in jobs:
+            distance = calculate_distance(
+                profile.latitude,
+                profile.longitude,
+                job.latitude,
+                job.longitude
+            )
+            if distance <= commute_radius:
+                filtered_jobs.append((job, distance))
+        
+        # Convert filtered jobs to JSON with distance info
+        for job, distance in filtered_jobs:
+            jobs_data.append({
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'location': job.location,
+                'latitude': float(job.latitude),
+                'longitude': float(job.longitude),
+                'job_type': job.get_job_type_display(),
+                'experience_level': job.get_experience_level_display(),
+                'work_location': job.get_work_location_display(),
+                'url': reverse('job_postings.show', args=[job.id]),
+                'distance': round(distance, 1)
+            })
+    else:
+        # No commute preferences set, show all jobs
+        for job in jobs:
+            jobs_data.append({
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'location': job.location,
+                'latitude': float(job.latitude),
+                'longitude': float(job.longitude),
+                'job_type': job.get_job_type_display(),
+                'experience_level': job.get_experience_level_display(),
+                'work_location': job.get_work_location_display(),
+                'url': reverse('job_postings.show', args=[job.id])
+            })
+    
+    # Also prepare all jobs (unfiltered) for toggle functionality
+    all_jobs_data = []
+    if user_location and commute_radius:
+        # If user has preferences, also send all jobs for toggle
+        for job in jobs:
+            distance = calculate_distance(
+                profile.latitude,
+                profile.longitude,
+                job.latitude,
+                job.longitude
+            )
+            all_jobs_data.append({
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'location': job.location,
+                'latitude': float(job.latitude),
+                'longitude': float(job.longitude),
+                'job_type': job.get_job_type_display(),
+                'experience_level': job.get_experience_level_display(),
+                'work_location': job.get_work_location_display(),
+                'url': reverse('job_postings.show', args=[job.id]),
+                'distance': round(distance, 1)
+            })
     
     return render(request, 'job_postings/map.html', {
         'jobs_json': json.dumps(jobs_data),
-        'jobs_count': jobs.count(),
-        'user_location': json.dumps(user_location) if user_location else 'null'
+        'all_jobs_json': json.dumps(all_jobs_data) if all_jobs_data else json.dumps(jobs_data),
+        'jobs_count': len(jobs_data),
+        'all_jobs_count': len(all_jobs_data) if all_jobs_data else len(jobs_data),
+        'user_location': json.dumps(user_location) if user_location else 'null',
+        'commute_radius': commute_radius,
+        'has_commute_filter': bool(user_location and commute_radius)
     })

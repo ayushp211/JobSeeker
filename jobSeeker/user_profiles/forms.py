@@ -79,6 +79,33 @@ class ProfilePrivacyForm(forms.ModelForm):
             'is_links_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+class CommutePreferencesForm(forms.ModelForm):
+    class Meta:
+        model = JobSeekerProfile
+        fields = ['preferred_location', 'commute_radius']
+        widgets = {
+            'preferred_location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Atlanta, GA',
+                'id': 'preferred_location'
+            }),
+            'commute_radius': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '500',
+                'step': '0.5',
+                'id': 'commute_radius'
+            }),
+        }
+        labels = {
+            'preferred_location': 'Preferred Location',
+            'commute_radius': 'Commute Radius (miles)'
+        }
+        help_texts = {
+            'preferred_location': 'Enter your home or preferred location (e.g., "Atlanta, GA")',
+            'commute_radius': 'Maximum distance you\'re willing to commute (in miles)'
+        }
+
 class CandidateSearchForm(forms.Form):
     skills = forms.ModelMultipleChoiceField(
         queryset=Skill.objects.all(),
