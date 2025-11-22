@@ -51,6 +51,12 @@
                   <a class="nav-link" href="{% url 'user_profiles.search_candidates' %}">
                     <i class="fas fa-search me-1"></i>Search Candidates
                   </a>
+                  <a class="nav-link" href="{% url 'user_profiles.saved_searches' %}">
+                    <i class="fas fa-bookmark me-1"></i>Saved Searches
+                  </a>
+                  <a class="nav-link position-relative" href="{% url 'user_profiles.search_notifications' %}">
+                    <i class="fas fa-bell me-1"></i>Notifications
+                  </a>
                 {% endif %}
                 <a class="nav-link" href="{% url 'user_profiles.profile' %}">Profile</a>
                 <a class="nav-link position-relative messages-nav-link" href="{% url 'messaging.inbox' %}">

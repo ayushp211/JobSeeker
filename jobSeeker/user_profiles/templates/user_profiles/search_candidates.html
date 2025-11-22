@@ -55,7 +55,57 @@
     
     <!-- Search Results -->
     {% if search_performed %}
-        <h4 class="mb-3">Search Results ({{ profiles_with_scores|length }} candidates found)</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Search Results ({{ profiles_with_scores|length }} candidates found)</h4>
+            {% if profiles_with_scores %}
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#saveSearchModal">
+                <i class="fas fa-bookmark"></i> Save This Search
+            </button>
+            {% endif %}
+        </div>
+        
+        <!-- Save Search Modal -->
+        <div class="modal fade" id="saveSearchModal" tabindex="-1" aria-labelledby="saveSearchModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="{% url 'user_profiles.save_search' %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="saveSearchModalLabel">Save Search</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="search_name" class="form-label">Search Name</label>
+                                <input type="text" class="form-control" id="search_name" name="name" placeholder="e.g., Python Developers in Atlanta" required>
+                                <small class="form-text text-muted">Give this search a memorable name</small>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                <label class="form-check-label" for="is_active">
+                                    Enable notifications for new matches
+                                </label>
+                            </div>
+                            
+                            <!-- Hidden fields to preserve search criteria -->
+                            {% for skill_id in search_params.skills %}
+                            <input type="hidden" name="skills" value="{{ skill_id }}">
+                            {% endfor %}
+                            {% if search_params.location %}
+                            <input type="hidden" name="location" value="{{ search_params.location }}">
+                            {% endif %}
+                            {% if search_params.project_keywords %}
+                            <input type="hidden" name="project_keywords" value="{{ search_params.project_keywords }}">
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Search</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         
         {% if profiles_with_scores %}
             <div class="row">

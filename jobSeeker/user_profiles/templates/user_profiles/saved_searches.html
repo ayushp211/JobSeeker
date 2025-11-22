@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-bookmark"></i> Saved Candidate Searches</h2>
+        <div>
+            <a href="{% url 'user_profiles.search_candidates' %}" class="btn btn-primary">
+                <i class="fas fa-search"></i> New Search
+            </a>
+            <a href="{% url 'user_profiles.check_matches' %}" class="btn btn-success">
+                <i class="fas fa-sync"></i> Check All for New Matches
+            </a>
+        </div>
+    </div>
+    
+    {% if saved_searches %}
+        <div class="row">
+            {% for search in saved_searches %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ search.name }}</h5>
+                        {% if search.unread_count > 0 %}
+                        <span class="badge bg-danger">{{ search.unread_count }} new</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-2">
+                            <small>Created: {{ search.created_at|date:"M d, Y" }}</small>
+                        </p>
+                        
+                        {% if search.skills.exists %}
+                        <p class="mb-2">
+                            <strong>Skills:</strong><br>
+                            {% for skill in search.skills.all %}
+                                <span class="badge bg-primary me-1">{{ skill.name }}</span>
+                            {% endfor %}
+                        </p>
+                        {% endif %}
+                        
+                        {% if search.location %}
+                        <p class="mb-2">
+                            <strong>Location:</strong> {{ search.location }}
+                        </p>
+                        {% endif %}
+                        
+                        {% if search.project_keywords %}
+                        <p class="mb-2">
+                            <strong>Project Keywords:</strong> {{ search.project_keywords }}
+                        </p>
+                        {% endif %}
+                        
+                        <p class="mb-2">
+                            <strong>Status:</strong>
+                            {% if search.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </p>
+                        
+                        {% if search.last_checked_at %}
+                        <p class="mb-0 text-muted">
+                            <small>Last checked: {{ search.last_checked_at|date:"M d, Y H:i" }}</small>
+                        </p>
+                        {% else %}
+                        <p class="mb-0 text-muted">
+                            <small>Never checked</small>
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group" role="group">
+                            <a href="{{ search.get_search_url }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-search"></i> Run Search
+                            </a>
+                            <a href="{% url 'user_profiles.check_matches_search' search.id %}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-sync"></i> Check Now
+                            </a>
+                            <a href="{% url 'user_profiles.delete_saved_search' search.id %}" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-bookmark fa-3x mb-3"></i>
+            <h5>No Saved Searches</h5>
+            <p>You haven't saved any candidate searches yet. Perform a search and click "Save This Search" to get notified about new matches.</p>
+            <a href="{% url 'user_profiles.search_candidates' %}" class="btn btn-primary">
+                <i class="fas fa-search"></i> Start Searching
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-bell"></i> Search Notifications
+            {% if unread_count > 0 %}
+            <span class="badge bg-danger">{{ unread_count }} unread</span>
+            {% endif %}
+        </h2>
+        <div>
+            <a href="{% url 'user_profiles.saved_searches' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-bookmark"></i> Saved Searches
+            </a>
+            <a href="{% url 'user_profiles.search_candidates' %}" class="btn btn-primary">
+                <i class="fas fa-search"></i> New Search
+            </a>
+        </div>
+    </div>
+    
+    {% if notifications %}
+        <div class="row">
+            {% for notification in notifications %}
+            <div class="col-md-6 mb-3">
+                <div class="card {% if not notification.is_read %}border-primary{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center {% if not notification.is_read %}bg-primary text-white{% endif %}">
+                        <div>
+                            <strong>New Match Found</strong>
+                            <br>
+                            <small>Search: {{ notification.saved_search.name }}</small>
+                        </div>
+                        {% if not notification.is_read %}
+                        <span class="badge bg-light text-dark">New</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            {{ notification.candidate.user.get_full_name|default:notification.candidate.user.username }}
+                        </h6>
+                        
+                        {% if notification.candidate.headline %}
+                        <p class="card-text"><em>{{ notification.candidate.headline }}</em></p>
+                        {% endif %}
+                        
+                        {% if notification.candidate.email %}
+                        <p class="card-text mb-2">
+                            <i class="fas fa-envelope"></i> {{ notification.candidate.email }}
+                        </p>
+                        {% endif %}
+                        
+                        {% if notification.candidate.skills.exists %}
+                        <p class="card-text mb-2">
+                            <strong>Skills:</strong><br>
+                            {% for skill in notification.candidate.skills.all|slice:":5" %}
+                                <span class="badge bg-secondary me-1">{{ skill.name }}</span>
+                            {% endfor %}
+                        </p>
+                        {% endif %}
+                        
+                        <p class="text-muted mb-0">
+                            <small>Found: {{ notification.created_at|date:"M d, Y H:i" }}</small>
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'user_profiles.view_public_profile' notification.candidate.user.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-user-circle"></i> View Profile
+                            </a>
+                            <a href="{{ notification.saved_search.get_search_url }}" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-search"></i> View Search
+                            </a>
+                            {% if not notification.is_read %}
+                            <button type="button" class="btn btn-outline-success btn-sm mark-read-btn" data-notification-id="{{ notification.id }}">
+                                <i class="fas fa-check"></i> Mark Read
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-bell-slash fa-3x mb-3"></i>
+            <h5>No Notifications</h5>
+            <p>You don't have any search notifications yet. New matches will appear here when found.</p>
+            <a href="{% url 'user_profiles.saved_searches' %}" class="btn btn-primary">
+                <i class="fas fa-bookmark"></i> View Saved Searches
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const markReadButtons = document.querySelectorAll('.mark-read-btn');
+    markReadButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.getAttribute('data-notification-id');
+            const card = this.closest('.card');
+            
+            // Get CSRF token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            fetch(`{% url 'user_profiles.mark_notification_read' 0 %}`.replace('0', notificationId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    card.classList.remove('border-primary');
+                    const header = card.querySelector('.card-header');
+                    header.classList.remove('bg-primary', 'text-white');
+                    header.classList.add('bg-light');
+                    this.remove();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+

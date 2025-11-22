@@ -94,3 +94,57 @@ class Link(models.Model):
     def __str__(self):
         return f"{self.name} ({self.url})"
 
+class SavedCandidateSearch(models.Model):
+    """
+    Stores saved candidate searches for recruiters.
+    """
+    recruiter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_candidate_searches')
+    name = models.CharField(max_length=200, help_text='Name for this saved search')
+    skills = models.ManyToManyField(Skill, blank=True, related_name='saved_searches')
+    location = models.CharField(max_length=255, blank=True, null=True)
+    project_keywords = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True, help_text='Last time this search was checked for new matches')
+    is_active = models.BooleanField(default=True, help_text='Whether to check for new matches')
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = 'Saved Candidate Searches'
+    
+    def __str__(self):
+        return f"{self.name} - {self.recruiter.username}"
+    
+    def get_search_url(self):
+        """Returns the URL to perform this search"""
+        from django.urls import reverse
+        from urllib.parse import urlencode
+        
+        params = {}
+        if self.skills.exists():
+            params['skills'] = [s.id for s in self.skills.all()]
+        if self.location:
+            params['location'] = self.location
+        if self.project_keywords:
+            params['project_keywords'] = self.project_keywords
+        
+        base_url = reverse('user_profiles.search_candidates')
+        if params:
+            return f"{base_url}?{urlencode(params, doseq=True)}"
+        return base_url
+
+class SearchNotification(models.Model):
+    """
+    Notifications for new candidate matches in saved searches.
+    """
+    saved_search = models.ForeignKey(SavedCandidateSearch, on_delete=models.CASCADE, related_name='notifications')
+    candidate = models.ForeignKey(JobSeekerProfile, on_delete=models.CASCADE, related_name='search_notifications')
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('saved_search', 'candidate')
+    
+    def __str__(self):
+        return f"New match: {self.candidate.user.username} for search '{self.saved_search.name}'"
+

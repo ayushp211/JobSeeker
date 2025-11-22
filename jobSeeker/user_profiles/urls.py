@@ -16,4 +16,11 @@ urlpatterns = [
     path('profile/set-location/', views.set_location, name='user_profiles.set_location'),
     path('search-candidates/', views.search_candidates, name='user_profiles.search_candidates'),
     path('view-profile/<int:user_id>/', views.view_public_profile, name='user_profiles.view_public_profile'),
+    path('save-search/', views.save_candidate_search, name='user_profiles.save_search'),
+    path('saved-searches/', views.saved_searches, name='user_profiles.saved_searches'),
+    path('saved-searches/delete/<int:search_id>/', views.delete_saved_search, name='user_profiles.delete_saved_search'),
+    path('search-notifications/', views.search_notifications, name='user_profiles.search_notifications'),
+    path('check-matches/', views.check_new_matches, name='user_profiles.check_matches'),
+    path('check-matches/<int:search_id>/', views.check_new_matches, name='user_profiles.check_matches_search'),
+    path('notifications/mark-read/<int:notification_id>/', views.mark_notification_read, name='user_profiles.mark_notification_read'),
 ] 

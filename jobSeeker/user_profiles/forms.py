@@ -1,5 +1,5 @@
 from django import forms
-from .models import JobSeekerProfile, WorkExperience, Education, Skill, Link
+from .models import JobSeekerProfile, WorkExperience, Education, Skill, Link, SavedCandidateSearch
 
 class HeadlineForm(forms.ModelForm):
     class Meta:
@@ -125,3 +125,20 @@ class CandidateSearchForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search by project keywords'}),
         help_text='Search in work experience descriptions'
     )
+
+class SaveSearchForm(forms.ModelForm):
+    class Meta:
+        model = SavedCandidateSearch
+        fields = ['name', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Python Developers in Atlanta',
+                'required': True
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'name': 'Search Name',
+            'is_active': 'Enable notifications for new matches'
+        }

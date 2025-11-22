@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Email Candidate</h2>
+        <a href="{% url 'view_applicant_profile' job_id=template_data.job.id user_id=template_data.job_seeker.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Profile
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <p class="mb-2"><strong>Candidate:</strong> {{ template_data.job_seeker.get_full_name|default:template_data.job_seeker.username }}</p>
+                        <p class="mb-2"><strong>Email:</strong> {{ template_data.job_seeker_profile.email }}</p>
+                        <p class="mb-0"><strong>Job:</strong> {{ template_data.job.title }} at {{ template_data.job.company }}</p>
+                    </div>
+
+                    <hr>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.subject.id_for_label }}" class="form-label">Subject</label>
+                            <input type="text" name="subject" class="form-control" id="{{ form.subject.id_for_label }}" placeholder="Email subject" maxlength="200" required value="{% if template_data.job %}Regarding your application for {{ template_data.job.title }} at {{ template_data.job.company }}{% endif %}">
+                            {% if form.subject.errors %}
+                                <div class="text-danger mt-1">{{ form.subject.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.message.id_for_label }}" class="form-label">Message</label>
+                            <textarea name="message" class="form-control" id="{{ form.message.id_for_label }}" placeholder="Enter your message to the candidate..." rows="8" maxlength="5000" required>{{ form.message.value|default:'' }}</textarea>
+                            {% if form.message.errors %}
+                                <div class="text-danger mt-1">{{ form.message.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Send Email
+                            </button>
+                            <a href="{% url 'view_applicant_profile' job_id=template_data.job.id user_id=template_data.job_seeker.id %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+
+
