@@ -13,6 +13,7 @@ urlpatterns = [
     path('<int:id>/edit/', views.edit, name='job_postings.edit'),
     path('<int:id>/delete/', views.delete, name='job_postings.delete'),
     path('<int:id>/manage-applications/', views.manage_applications, name='job_postings.manage_applications'),
+    path('<int:id>/applicant-locations/', views.applicant_location_map, name='job_postings.applicant_location_map'),
     path('update-application-status/<int:application_id>/', views.update_application_status, name='job_postings.update_application_status'),
     # Pipeline URLs
     path('<int:id>/pipeline/', views.pipeline, name='job_postings.pipeline'),

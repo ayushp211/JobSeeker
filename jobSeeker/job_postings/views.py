@@ -544,6 +544,59 @@ def recommendations(request):
     })
 
 @login_required
+def applicant_location_map(request, id):
+    """
+    US#18: Recruiter-facing view to see clusters of applicants by location on a map.
+    Shows where applicants for a specific job are located, with clustering for better visualization.
+    """
+    job = get_object_or_404(Job, id=id)
+    
+    # Check if user is the owner of the job and is a recruiter
+    if job.posted_by != request.user:
+        messages.error(request, 'You can only view applicant locations for your own job postings.')
+        return redirect('job_postings.show', id=id)
+    
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.user_type != 'recruiter':
+        messages.error(request, 'Only recruiters can view applicant location maps.')
+        return redirect('job_postings.show', id=id)
+    
+    # Get all applications for this job
+    applications = JobApplication.objects.filter(job=job).select_related('applicant')
+    
+    # Get applicant profiles with location data
+    applicant_data = []
+    for application in applications:
+        try:
+            profile = JobSeekerProfile.objects.get(user=application.applicant)
+            # Only include applicants with valid location data
+            if profile.latitude and profile.longitude:
+                applicant_data.append({
+                    'application_id': application.id,
+                    'user_id': application.applicant.id,
+                    'name': profile.first_name and profile.last_name 
+                            and f"{profile.first_name} {profile.last_name}" 
+                            or application.applicant.get_full_name() 
+                            or application.applicant.username,
+                    'email': profile.email or application.applicant.email or 'No email',
+                    'location': profile.preferred_location or 'Location not specified',
+                    'latitude': float(profile.latitude),
+                    'longitude': float(profile.longitude),
+                    'applied_at': application.applied_at.strftime('%Y-%m-%d %H:%M'),
+                    'status': application.status.name if application.status else 'No Status',
+                    'status_color': application.status.color if application.status else '#6c757d',
+                })
+        except JobSeekerProfile.DoesNotExist:
+            # Skip applicants without profiles
+            continue
+    
+    return render(request, 'job_postings/applicant_location_map.html', {
+        'job': job,
+        'applicants_json': json.dumps(applicant_data),
+        'applicants_count': len(applicant_data),
+        'total_applications': applications.count(),
+    })
+
+@login_required
 def job_map(request):
     """
     Interactive map view for job seekers to see job postings on a map.

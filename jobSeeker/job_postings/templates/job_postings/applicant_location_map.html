@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header Section -->
+    <div class="bg-primary text-white py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-map-marked-alt me-2"></i>Applicant Locations
+                    </h2>
+                    <p class="mb-0">
+                        {{ job.title }} at {{ job.company }} - 
+                        <span id="visible-applicants-count">{{ applicants_count }}</span> applicants with location data
+                        {% if applicants_count < total_applications %}
+                            ({{ total_applications }} total applicants)
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'job_postings.manage_applications' job.id %}" class="btn btn-light">
+                        <i class="fas fa-users me-2"></i>Manage Applications
+                    </a>
+                    <a href="{% url 'job_postings.pipeline' job.id %}" class="btn btn-light">
+                        <i class="fas fa-columns me-2"></i>View Pipeline
+                    </a>
+                    <a href="{% url 'job_postings.show' job.id %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Job
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map" style="height: calc(100vh - 140px); width: 100%;"></div>
+
+    <!-- Info Panel -->
+    <div class="position-fixed bottom-0 end-0 m-3" style="z-index: 1000;">
+        <div class="card shadow-lg" id="info-panel" style="max-width: 300px; display: none;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Applicant Details</h6>
+                <button type="button" class="btn-close btn-close-white" onclick="closeInfoPanel()"></button>
+            </div>
+            <div class="card-body" id="info-content">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+<!-- Leaflet.markercluster for grouping nearby markers -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+    // Get applicants data from Django template
+    var applicants = {{ applicants_json|safe }};
+    var jobData = {
+        title: "{{ job.title|escapejs }}",
+        company: "{{ job.company|escapejs }}",
+        location: "{{ job.location|escapejs }}",
+        latitude: {{ job.latitude|default:"null" }},
+        longitude: {{ job.longitude|default:"null" }},
+    };
+    var jobId = {{ job.id }};
+    // Function to get applicant profile URL
+    function getApplicantProfileUrl(userId) {
+        return "{% url 'view_applicant_profile' job_id=job.id user_id=0 %}".replace('/0/', '/' + userId + '/');
+    }
+
+    // Initialize map
+    var map = L.map('map').setView([39.8283, -98.5795], 4); // Default to center of USA, zoomed out
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Create a marker cluster group for better performance and visualization
+    var markers = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50, // Cluster markers within 50 pixels
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: true,
+        zoomToBoundsOnClick: true
+    });
+
+    // Define custom icon for applicants
+    var applicantIcon = L.divIcon({
+        className: 'custom-applicant-marker',
+        html: '<div style="background-color: #28a745; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.4); position: relative; z-index: 1000;"><i class="fas fa-user"></i></div>',
+        iconSize: [35, 35],
+        iconAnchor: [17.5, 17.5]
+    });
+
+    // Define custom icon for job location
+    var jobIcon = L.divIcon({
+        className: 'custom-job-marker',
+        html: '<div style="background-color: #007bff; color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.4); position: relative; z-index: 2000;"><i class="fas fa-briefcase"></i></div>',
+        iconSize: [45, 45],
+        iconAnchor: [22.5, 22.5]
+    });
+
+    // Add markers for each applicant
+    applicants.forEach(function(applicant) {
+        var marker = L.marker([applicant.latitude, applicant.longitude], {icon: applicantIcon});
+        marker.applicantData = applicant; // Store applicant data with marker
+        
+        // Create popup content
+        var popupContent = `
+            <div style="min-width: 200px;">
+                <h6 class="fw-bold mb-2">${escapeHtml(applicant.name)}</h6>
+                <p class="mb-1 small">
+                    <i class="fas fa-envelope"></i> ${escapeHtml(applicant.email)}
+                </p>
+                <p class="mb-2 text-muted small">
+                    <i class="fas fa-map-marker-alt"></i> ${escapeHtml(applicant.location)}
+                </p>
+                <p class="mb-2">
+                    <span class="badge" style="background-color: ${applicant.status_color}; color: white;">
+                        ${escapeHtml(applicant.status)}
+                    </span>
+                </p>
+                <p class="mb-2 small text-muted">
+                    <i class="fas fa-clock"></i> Applied ${applicant.applied_at}
+                </p>
+                <a href="${getApplicantProfileUrl(applicant.user_id)}" class="btn btn-sm btn-primary mt-2 w-100">
+                    View Profile
+                </a>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        
+        // Add click event for info panel
+        marker.on('click', function() {
+            showInfoPanel(applicant);
+        });
+        
+        markers.addLayer(marker);
+    });
+
+    // Add job location marker if available
+    if (jobData.latitude && jobData.longitude) {
+        var jobMarker = L.marker([jobData.latitude, jobData.longitude], {icon: jobIcon})
+            .addTo(map)
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-briefcase"></i> Job Location</h6>
+                    <p class="mb-1"><strong>${escapeHtml(jobData.title)}</strong></p>
+                    <p class="mb-1">${escapeHtml(jobData.company)}</p>
+                    <p class="mb-0 text-muted small">
+                        <i class="fas fa-map-marker-alt"></i> ${escapeHtml(jobData.location)}
+                    </p>
+                </div>
+            `);
+    }
+
+    // Add markers to map
+    map.addLayer(markers);
+
+    // Fit map to show all markers
+    if (applicants.length > 0) {
+        var bounds = markers.getBounds();
+        if (jobData.latitude && jobData.longitude) {
+            bounds.extend([jobData.latitude, jobData.longitude]);
+        }
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, {padding: [50, 50]});
+        }
+    } else {
+        // If no applicants with location data, center on job location or default
+        if (jobData.latitude && jobData.longitude) {
+            map.setView([jobData.latitude, jobData.longitude], 10);
+        }
+    }
+
+    // Function to escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
+    // Function to show info panel
+    function showInfoPanel(applicant) {
+        var panel = document.getElementById('info-panel');
+        var content = document.getElementById('info-content');
+        
+        content.innerHTML = `
+            <h5 class="card-title">${escapeHtml(applicant.name)}</h5>
+            <hr>
+            <p class="mb-2">
+                <i class="fas fa-envelope text-primary"></i>
+                <strong>Email:</strong> ${escapeHtml(applicant.email)}
+            </p>
+            <p class="mb-2">
+                <i class="fas fa-map-marker-alt text-danger"></i>
+                <strong>Location:</strong> ${escapeHtml(applicant.location)}
+            </p>
+            <p class="mb-2">
+                <i class="fas fa-info-circle text-info"></i>
+                <strong>Status:</strong> 
+                <span class="badge" style="background-color: ${applicant.status_color}; color: white;">
+                    ${escapeHtml(applicant.status)}
+                </span>
+            </p>
+            <p class="mb-3">
+                <i class="fas fa-clock text-muted"></i>
+                <strong>Applied:</strong> ${applicant.applied_at}
+            </p>
+            <a href="${getApplicantProfileUrl(applicant.user_id)}" 
+               class="btn btn-primary w-100">
+                <i class="fas fa-user me-1"></i> View Full Profile
+            </a>
+        `;
+        
+        panel.style.display = 'block';
+    }
+
+    // Function to close info panel
+    function closeInfoPanel() {
+        document.getElementById('info-panel').style.display = 'none';
+    }
+
+    // Close info panel when clicking outside
+    document.getElementById('map').addEventListener('click', function(e) {
+        if (e.target.id === 'map') {
+            closeInfoPanel();
+        }
+    });
+
+    // Update visible count
+    function updateVisibleCount(count) {
+        document.getElementById('visible-applicants-count').textContent = count;
+    }
+
+    // Add custom styles for markers
+    const style = document.createElement('style');
+    style.textContent = `
+        .custom-applicant-marker {
+            background: transparent;
+            border: none;
+        }
+        .custom-applicant-marker:hover {
+            transform: scale(1.1);
+        }
+        .custom-job-marker {
+            background: transparent;
+            border: none;
+        }
+        .custom-job-marker:hover {
+            transform: scale(1.1);
+        }
+        .leaflet-marker-pane {
+            z-index: 600 !important;
+        }
+    `;
+    document.head.appendChild(style);
+</script>
+
+<style>
+    /* Custom styles for the map */
+    #map {
+        border-top: 3px solid #007bff;
+    }
+    
+    .position-fixed {
+        animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #info-panel {
+            max-width: 100% !important;
+            margin: 0 !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: 0 !important;
+            border-radius: 15px 15px 0 0;
+        }
+    }
+
+    /* Cluster styling */
+    .marker-cluster-small {
+        background-color: rgba(40, 167, 69, 0.6);
+    }
+    .marker-cluster-small div {
+        background-color: rgba(40, 167, 69, 0.8);
+    }
+    .marker-cluster-medium {
+        background-color: rgba(255, 193, 7, 0.6);
+    }
+    .marker-cluster-medium div {
+        background-color: rgba(255, 193, 7, 0.8);
+    }
+    .marker-cluster-large {
+        background-color: rgba(220, 53, 69, 0.6);
+    }
+    .marker-cluster-large div {
+        background-color: rgba(220, 53, 69, 0.8);
+    }
+</style>
+{% endblock %}
+

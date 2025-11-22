@@ -20,6 +20,9 @@
                                     <li><a class="dropdown-item" href="{% url 'job_postings.pipeline' job.id %}">
                                         <i class="fas fa-columns"></i> View Pipeline ({{ job.applications.count }})
                                     </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'job_postings.applicant_location_map' job.id %}">
+                                        <i class="fas fa-map-marked-alt"></i> View Applicant Locations
+                                    </a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="{% url 'job_postings.manage_applications' job.id %}">
                                         <i class="fas fa-users"></i> Manage Applications

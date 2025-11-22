@@ -10,6 +10,9 @@
                     <h4 class="text-primary">{{ job.title }} at {{ job.company }}</h4>
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="{% url 'job_postings.applicant_location_map' job.id %}" class="btn btn-outline-success">
+                        <i class="fas fa-map-marked-alt me-1"></i> View on Map
+                    </a>
                     <a href="{% url 'job_postings.candidate_recommendations' job.id %}" class="btn btn-outline-primary">
                         <i class="fas fa-user-check me-1"></i> Recommended Candidates
                     </a>
