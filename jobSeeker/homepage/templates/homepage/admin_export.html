@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="mb-1">
+                        <i class="fas fa-download me-2 text-primary"></i>Data Export
+                    </h1>
+                    <p class="text-muted mb-0">Export platform data as CSV files for reporting and analysis</p>
+                </div>
+                <a href="{% url 'homepage.index' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Home
+                </a>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Administrator Access Only:</strong> This page allows you to export platform data in CSV format for reporting and analysis purposes. 
+                All exports include timestamps and are formatted for easy analysis in spreadsheet applications.
+            </div>
+
+            <div class="row mt-4">
+                <!-- Users Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-users fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Users</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export all user accounts including job seekers and recruiters with their profile information, registration dates, and account status.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> User credentials</li>
+                                <li><i class="fas fa-check text-success me-1"></i> User types</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Registration dates</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Account status</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'users' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-download me-2"></i>Export Users CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jobs Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-briefcase fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Job Postings</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export all job postings with details including company, location, salary, requirements, and application statistics.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> Job details</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Salary information</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Application counts</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Posting dates</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'jobs' %}" class="btn btn-success w-100">
+                                <i class="fas fa-download me-2"></i>Export Jobs CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Applications Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-file-alt fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Applications</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export all job applications with applicant information, application status, and timestamps.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> Applicant details</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Application status</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Application dates</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Job information</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'applications' %}" class="btn btn-info w-100">
+                                <i class="fas fa-download me-2"></i>Export Applications CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversations Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-comments fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Conversations</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export all conversations between recruiters and job seekers with metadata and message counts.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> Participant information</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Conversation metadata</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Message counts</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Activity timestamps</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'conversations' %}" class="btn btn-warning w-100">
+                                <i class="fas fa-download me-2"></i>Export Conversations CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-envelope fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Messages</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export all individual messages from conversations with sender, recipient, content, and read status.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> Message content</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Sender/recipient</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Read status</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Timestamps</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'messages' %}" class="btn btn-danger w-100">
+                                <i class="fas fa-download me-2"></i>Export Messages CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profiles Export -->
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user-circle fa-lg"></i>
+                                </div>
+                                <h5 class="card-title mb-0 ms-3">Job Seeker Profiles</h5>
+                            </div>
+                            <p class="card-text text-muted">
+                                Export detailed job seeker profiles including skills, location, education, and work experience counts.
+                            </p>
+                            <ul class="list-unstyled small text-muted mb-3">
+                                <li><i class="fas fa-check text-success me-1"></i> Profile information</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Skills and location</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Education/experience counts</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Profile completeness</li>
+                            </ul>
+                            <a href="{% url 'homepage.export_csv' 'profiles' %}" class="btn btn-secondary w-100">
+                                <i class="fas fa-download me-2"></i>Export Profiles CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Export Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-file-csv text-primary me-2"></i>CSV Format</h6>
+                            <ul class="list-unstyled text-muted">
+                                <li>• All exports are in CSV format (comma-separated values)</li>
+                                <li>• Files are named with data type and timestamp</li>
+                                <li>• Compatible with Excel, Google Sheets, and other spreadsheet applications</li>
+                                <li>• UTF-8 encoding for international character support</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-shield-alt text-success me-2"></i>Data Privacy</h6>
+                            <ul class="list-unstyled text-muted">
+                                <li>• Only administrators can access this export functionality</li>
+                                <li>• All exports include complete data for reporting purposes</li>
+                                <li>• Handle exported data according to your organization's privacy policy</li>
+                                <li>• Exports are generated on-demand and not stored on the server</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
