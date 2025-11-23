@@ -20,4 +20,12 @@ urlpatterns = [
     path('update-pipeline-status/<int:application_id>/', views.update_pipeline_status, name='job_postings.update_pipeline_status'),
     path('update-application-notes/<int:application_id>/', views.update_application_notes, name='job_postings.update_application_notes'),
     path('job/<int:job_id>/applicant/<int:user_id>/', views.view_applicant_profile, name='view_applicant_profile'),
+    # Admin Moderation URLs
+    path('admin/dashboard/', views.admin_dashboard, name='job_postings.admin_dashboard'),
+    path('admin/moderate/', views.admin_moderate_jobs, name='job_postings.admin_moderate_jobs'),
+    path('admin/<int:id>/flag/', views.admin_flag_job, name='job_postings.admin_flag_job'),
+    path('admin/<int:id>/unflag/', views.admin_unflag_job, name='job_postings.admin_unflag_job'),
+    path('admin/<int:id>/deactivate/', views.admin_deactivate_job, name='job_postings.admin_deactivate_job'),
+    path('admin/<int:id>/activate/', views.admin_activate_job, name='job_postings.admin_activate_job'),
+    path('admin/<int:id>/delete/', views.admin_delete_job, name='job_postings.admin_delete_job'),
 ] 

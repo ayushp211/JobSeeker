@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-flag me-2"></i>
+                        Flag Job for Review
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Flagging this job will mark it for administrative review. The job will remain visible but will be highlighted for moderation.
+                    </div>
+
+                    <h5 class="mb-3">Job Details</h5>
+                    <div class="mb-4">
+                        <p><strong>Title:</strong> {{ job.title }}</p>
+                        <p><strong>Company:</strong> {{ job.company }}</p>
+                        <p><strong>Location:</strong> {{ job.location }}</p>
+                        <p><strong>Posted By:</strong> {{ job.posted_by.username }}</p>
+                        <p><strong>Created:</strong> {{ job.created_at|date:"F d, Y" }}</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason for Flagging *</label>
+                            <textarea name="reason" id="reason" class="form-control" rows="4" 
+                                      placeholder="Explain why this job is being flagged (e.g., spam, inappropriate content, suspicious activity)" 
+                                      required></textarea>
+                            <small class="text-muted">This reason will be visible to other administrators.</small>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'job_postings.admin_moderate_jobs' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-flag me-1"></i> Flag This Job
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

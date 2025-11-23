@@ -63,6 +63,10 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    is_flagged = models.BooleanField(default=False, help_text="Flagged by admin for review")
+    flagged_reason = models.TextField(blank=True, help_text="Reason for flagging")
+    flagged_at = models.DateTimeField(null=True, blank=True)
+    flagged_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='flagged_jobs')
     
     class Meta:
         ordering = ['-created_at']

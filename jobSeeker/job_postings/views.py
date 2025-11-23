@@ -1,9 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import Http404, JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.db import IntegrityError
+from django.utils import timezone
 from collections import defaultdict
 import json
 from django.urls import reverse
@@ -465,6 +467,153 @@ def update_application_notes(request, application_id):
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
+# Admin Moderation Views
+
+def is_admin(user):
+    """Check if user is a superuser/admin"""
+    return user.is_authenticated and user.is_superuser
+
+@user_passes_test(is_admin)
+def admin_dashboard(request):
+    """Admin dashboard with statistics"""
+    total_jobs = Job.objects.count()
+    active_jobs = Job.objects.filter(is_active=True).count()
+    flagged_jobs = Job.objects.filter(is_flagged=True).count()
+    inactive_jobs = Job.objects.filter(is_active=False).count()
+    
+    total_applications = JobApplication.objects.count()
+    total_users = User.objects.count()
+    
+    recent_jobs = Job.objects.order_by('-created_at')[:5]
+    flagged_jobs_list = Job.objects.filter(is_flagged=True).order_by('-flagged_at')[:5]
+    
+    context = {
+        'total_jobs': total_jobs,
+        'active_jobs': active_jobs,
+        'flagged_jobs': flagged_jobs,
+        'inactive_jobs': inactive_jobs,
+        'total_applications': total_applications,
+        'total_users': total_users,
+        'recent_jobs': recent_jobs,
+        'flagged_jobs_list': flagged_jobs_list,
+    }
+    
+    return render(request, 'job_postings/admin_dashboard.html', context)
+
+@user_passes_test(is_admin)
+def admin_moderate_jobs(request):
+    """View all jobs for moderation"""
+    # Get filter parameters
+    status_filter = request.GET.get('status', 'all')
+    search_query = request.GET.get('q', '')
+    
+    jobs = Job.objects.select_related('posted_by').annotate(
+        application_count=Count('applications')
+    )
+    
+    # Apply filters
+    if status_filter == 'active':
+        jobs = jobs.filter(is_active=True, is_flagged=False)
+    elif status_filter == 'inactive':
+        jobs = jobs.filter(is_active=False)
+    elif status_filter == 'flagged':
+        jobs = jobs.filter(is_flagged=True)
+    
+    # Apply search
+    if search_query:
+        jobs = jobs.filter(
+            Q(title__icontains=search_query) |
+            Q(company__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    jobs = jobs.order_by('-created_at')
+    
+    context = {
+        'jobs': jobs,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'job_postings/admin_moderate_jobs.html', context)
+
+@user_passes_test(is_admin)
+def admin_flag_job(request, id):
+    """Flag a job post for review"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'Flagged by administrator')
+        job.is_flagged = True
+        job.flagged_reason = reason
+        job.flagged_at = timezone.now()
+        job.flagged_by = request.user
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been flagged for review.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return render(request, 'job_postings/admin_flag_job.html', {'job': job})
+
+@user_passes_test(is_admin)
+def admin_unflag_job(request, id):
+    """Remove flag from a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_flagged = False
+        job.flagged_reason = ''
+        job.flagged_at = None
+        job.flagged_by = None
+        job.save()
+        
+        messages.success(request, f'Flag removed from job "{job.title}".')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_deactivate_job(request, id):
+    """Deactivate a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_active = False
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been deactivated.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_activate_job(request, id):
+    """Activate a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_active = True
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been activated.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_delete_job(request, id):
+    """Permanently delete a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job_title = job.title
+        job.delete()
+        
+        messages.success(request, f'Job "{job_title}" has been permanently deleted.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return render(request, 'job_postings/admin_delete_job.html', {'job': job})
+
 @login_required
 def view_applicant_profile(request, job_id, user_id): # Updated function signature
     """
@@ -731,3 +880,150 @@ def job_map(request):
         'commute_radius': commute_radius,
         'has_commute_filter': bool(user_location and commute_radius)
     })
+
+# ============ Admin Moderation Views ============
+
+def is_admin(user):
+    """Check if user is a superuser/admin"""
+    return user.is_authenticated and user.is_superuser
+
+@user_passes_test(is_admin)
+def admin_dashboard(request):
+    """Admin dashboard with statistics"""
+    total_jobs = Job.objects.count()
+    active_jobs = Job.objects.filter(is_active=True).count()
+    flagged_jobs = Job.objects.filter(is_flagged=True).count()
+    inactive_jobs = Job.objects.filter(is_active=False).count()
+    
+    total_applications = JobApplication.objects.count()
+    total_users = User.objects.count()
+    
+    recent_jobs = Job.objects.select_related('posted_by').order_by('-created_at')[:5]
+    flagged_jobs_list = Job.objects.filter(is_flagged=True).select_related('posted_by', 'flagged_by').order_by('-flagged_at')[:5]
+    
+    context = {
+        'total_jobs': total_jobs,
+        'active_jobs': active_jobs,
+        'flagged_jobs': flagged_jobs,
+        'inactive_jobs': inactive_jobs,
+        'total_applications': total_applications,
+        'total_users': total_users,
+        'recent_jobs': recent_jobs,
+        'flagged_jobs_list': flagged_jobs_list,
+    }
+    
+    return render(request, 'job_postings/admin_dashboard.html', context)
+
+@user_passes_test(is_admin)
+def admin_moderate_jobs(request):
+    """View all jobs for moderation"""
+    # Get filter parameters
+    status_filter = request.GET.get('status', 'all')
+    search_query = request.GET.get('q', '')
+    
+    jobs = Job.objects.select_related('posted_by').annotate(
+        application_count=Count('applications')
+    )
+    
+    # Apply filters
+    if status_filter == 'active':
+        jobs = jobs.filter(is_active=True, is_flagged=False)
+    elif status_filter == 'inactive':
+        jobs = jobs.filter(is_active=False)
+    elif status_filter == 'flagged':
+        jobs = jobs.filter(is_flagged=True)
+    
+    # Apply search
+    if search_query:
+        jobs = jobs.filter(
+            Q(title__icontains=search_query) |
+            Q(company__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    jobs = jobs.order_by('-created_at')
+    
+    context = {
+        'jobs': jobs,
+        'status_filter': status_filter,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'job_postings/admin_moderate_jobs.html', context)
+
+@user_passes_test(is_admin)
+def admin_flag_job(request, id):
+    """Flag a job post for review"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'Flagged by administrator')
+        job.is_flagged = True
+        job.flagged_reason = reason
+        job.flagged_at = timezone.now()
+        job.flagged_by = request.user
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been flagged for review.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return render(request, 'job_postings/admin_flag_job.html', {'job': job})
+
+@user_passes_test(is_admin)
+def admin_unflag_job(request, id):
+    """Remove flag from a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_flagged = False
+        job.flagged_reason = ''
+        job.flagged_at = None
+        job.flagged_by = None
+        job.save()
+        
+        messages.success(request, f'Flag removed from job "{job.title}".')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_deactivate_job(request, id):
+    """Deactivate a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_active = False
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been deactivated.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_activate_job(request, id):
+    """Activate a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job.is_active = True
+        job.save()
+        
+        messages.success(request, f'Job "{job.title}" has been activated.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return redirect('job_postings.admin_moderate_jobs')
+
+@user_passes_test(is_admin)
+def admin_delete_job(request, id):
+    """Permanently delete a job post"""
+    job = get_object_or_404(Job, id=id)
+    
+    if request.method == 'POST':
+        job_title = job.title
+        job.delete()
+        
+        messages.success(request, f'Job "{job_title}" has been permanently deleted.')
+        return redirect('job_postings.admin_moderate_jobs')
+    
+    return render(request, 'job_postings/admin_delete_job.html', {'job': job})

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>
+                    <i class="fas fa-gavel text-danger me-2"></i>
+                    Moderate Job Posts
+                </h1>
+                <a href="{% url 'job_postings.admin_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" class="d-flex gap-2">
+                <div class="btn-group" role="group">
+                    <a href="?status=all{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="btn btn-outline-secondary {% if status_filter == 'all' %}active{% endif %}">
+                        <i class="fas fa-list"></i> All
+                    </a>
+                    <a href="?status=active{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="btn btn-outline-success {% if status_filter == 'active' %}active{% endif %}">
+                        <i class="fas fa-check"></i> Active
+                    </a>
+                    <a href="?status=flagged{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="btn btn-outline-warning {% if status_filter == 'flagged' %}active{% endif %}">
+                        <i class="fas fa-flag"></i> Flagged
+                    </a>
+                    <a href="?status=inactive{% if search_query %}&q={{ search_query }}{% endif %}" 
+                       class="btn btn-outline-secondary {% if status_filter == 'inactive' %}active{% endif %}">
+                        <i class="fas fa-ban"></i> Inactive
+                    </a>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+                <input type="text" name="q" class="form-control" placeholder="Search jobs..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Jobs List -->
+    <div class="row">
+        <div class="col-12">
+            {% if jobs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Job Title</th>
+                                <th>Company</th>
+                                <th>Posted By</th>
+                                <th>Applications</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                                <tr {% if job.is_flagged %}class="table-warning"{% endif %}>
+                                    <td>
+                                        <a href="{% url 'job_postings.show' job.id %}" target="_blank">
+                                            {{ job.title }}
+                                        </a>
+                                        {% if job.is_flagged %}
+                                            <br>
+                                            <small class="text-danger">
+                                                <i class="fas fa-flag me-1"></i>
+                                                {{ job.flagged_reason|truncatewords:10 }}
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ job.company }}</td>
+                                    <td>{{ job.posted_by.username }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ job.application_count }}</span>
+                                    </td>
+                                    <td>
+                                        <small>{{ job.created_at|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if job.is_flagged %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-flag"></i> Flagged
+                                            </span>
+                                        {% elif job.is_active %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-ban"></i> Inactive
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if job.is_flagged %}
+                                                <form method="post" action="{% url 'job_postings.admin_unflag_job' job.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-success" title="Remove Flag">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <a href="{% url 'job_postings.admin_flag_job' job.id %}" 
+                                                   class="btn btn-outline-warning" title="Flag for Review">
+                                                    <i class="fas fa-flag"></i>
+                                                </a>
+                                            {% endif %}
+                                            
+                                            {% if job.is_active %}
+                                                <form method="post" action="{% url 'job_postings.admin_deactivate_job' job.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-secondary" title="Deactivate">
+                                                        <i class="fas fa-ban"></i>
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <form method="post" action="{% url 'job_postings.admin_activate_job' job.id %}" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-outline-success" title="Activate">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                            
+                                            <a href="{% url 'job_postings.admin_delete_job' job.id %}" 
+                                               class="btn btn-outline-danger" title="Delete Permanently">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No jobs found</h5>
+                    <p class="text-muted">
+                        {% if search_query %}
+                            No jobs match your search criteria.
+                        {% else %}
+                            There are no jobs with the selected filter.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
